@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Page not found')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: publicHeader}"></header>
+<main class="site-main">
+    <div class="container">
+        <div class="error-shell">
+            <div class="error-code">404</div>
+            <h1 th:text="${title} ?: 'We could not find that page'">We could not find that page</h1>
+            <p th:text="${message} ?: 'The page or resource you requested does not exist, or it belongs to another account.'">
+                The page does not exist.</p>
+            <div class="btn-row" style="justify-content: center;">
+                <a class="btn btn--primary" th:href="@{/dashboard}">Go to dashboard</a>
+                <a class="btn btn--secondary" th:href="@{/documents}">Open documents</a>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+</body>
+</html>

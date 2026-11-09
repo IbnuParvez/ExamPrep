@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head(${pack.title})}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Study package</span>
+                <h1 class="page-title" th:text="${pack.title}">Study package</h1>
+                <p class="page-subtitle">
+                    Generated from <span th:text="${pack.documentFilename} ?: 'your document'">notes.pdf</span>
+                    <span th:text="' · ' + ${pack.language} + ' · ' + ${pack.academicLevel}"> · English</span>
+                </p>
+            </div>
+            <div class="btn-row">
+                <a class="btn btn--primary" th:href="@{/study/{id}/exam(id=${pack.studyPackId})}">Start mock exam</a>
+            </div>
+        </div>
+
+        <section class="panel mb-3">
+            <div class="panel__head">
+                <h2 class="panel__title">Document overview</h2>
+            </div>
+            <div class="panel__body prose">
+                <p th:if="${pack.introduction != null}" th:text="${pack.introduction}">Introduction</p>
+                <p th:if="${pack.summary != null}" th:text="${pack.summary}">Summary</p>
+            </div>
+        </section>
+
+        <div class="stat-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+            <section class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">Learning objectives</h2>
+                </div>
+                <div class="panel__body">
+                    <p class="muted" th:if="${#lists.isEmpty(pack.learningObjectives)}">
+                        No separate objectives were produced for this document.
+                    </p>
+                    <ul class="concept-list" th:unless="${#lists.isEmpty(pack.learningObjectives)}">
+                        <li th:each="objective : ${pack.learningObjectives}" th:text="${objective}">Objective</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">Revision priorities</h2>
+                </div>
+                <div class="panel__body">
+                    <p class="muted" th:if="${#lists.isEmpty(pack.revisionPriorities)}">
+                        No separate priorities were produced for this document.
+                    </p>
+                    <ul class="concept-list" th:unless="${#lists.isEmpty(pack.revisionPriorities)}">
+                        <li th:each="priority : ${pack.revisionPriorities}" th:text="${priority}">Priority</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel mt-3">
+            <div class="panel__head">
+                <h2 class="panel__title">Continue studying</h2>
+                <span class="panel__meta"
+                      th:text="${#lists.size(pack.topics)} + ' topics · ' + ${#lists.size(pack.flashcards)} + ' flashcards · ' + ${#lists.size(pack.practiceQuestions)} + ' questions'">0</span>
+            </div>
+            <div class="panel__body">
+                <div class="btn-row">
+                    <a class="btn btn--secondary" th:href="@{/study/{id}/topics(id=${pack.studyPackId})}">Topics</a>
+                    <a class="btn btn--secondary" th:href="@{/study/{id}/notes(id=${pack.studyPackId})}">Revision notes</a>
+                    <a class="btn btn--secondary" th:href="@{/study/{id}/flashcards(id=${pack.studyPackId})}">Flashcards</a>
+                    <a class="btn btn--secondary" th:href="@{/study/{id}/practice(id=${pack.studyPackId})}">Practice questions</a>
+                    <a class="btn btn--secondary" th:href="@{/study/{id}/tutor(id=${pack.studyPackId})}">Ask the tutor</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

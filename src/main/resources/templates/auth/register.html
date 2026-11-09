@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Create an account')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: publicHeader}"></header>
+
+<main class="site-main">
+    <div class="container auth-shell">
+        <div class="auth-card">
+            <h1>Create your account</h1>
+            <p class="auth-card__intro">One account keeps your documents, study packages and results together.</p>
+
+            <form th:action="@{/register}" th:object="${form}" method="post" novalidate>
+                <div class="alert alert--error" th:if="${#fields.hasGlobalErrors()}">
+                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
+                </div>
+                <div class="field">
+                    <label for="fullName">Full name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" autocomplete="name" required>
+                    <span class="error-text" th:if="${#fields.hasErrors('fullName')}"
+                          th:errors="*{fullName}">Name error</span>
+                </div>
+                <div class="field">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" th:field="*{email}" autocomplete="email" required>
+                    <span class="error-text" th:if="${#fields.hasErrors('email')}"
+                          th:errors="*{email}">Email error</span>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" th:field="*{password}" autocomplete="new-password" required>
+                    <span class="hint">At least 8 characters, including a letter and a number.</span>
+                    <span class="error-text" th:if="${#fields.hasErrors('password')}"
+                          th:errors="*{password}">Password error</span>
+                </div>
+                <div class="field">
+                    <label for="confirmPassword">Confirm password</label>
+                    <input type="password" id="confirmPassword" th:field="*{confirmPassword}"
+                           autocomplete="new-password" required>
+                    <span class="error-text" th:if="${#fields.hasErrors('confirmPassword')}"
+                          th:errors="*{confirmPassword}">Password confirmation error</span>
+                </div>
+                <button class="btn btn--primary btn--block" type="submit">Create account</button>
+            </form>
+
+            <p class="auth-card__footer">
+                Already have an account? <a th:href="@{/login}">Sign in</a>.
+                Extracted document text is sent to Google's Gemini API to generate study material.
+            </p>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+</body>
+</html>

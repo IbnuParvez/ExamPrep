@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Formulas and key facts')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Reference</span>
+                <h1 class="page-title">Formulas and key facts</h1>
+                <p class="page-subtitle">Only formulas that appear in the uploaded document are listed here.</p>
+            </div>
+        </div>
+
+        <section class="panel mb-3" th:if="${!#lists.isEmpty(pack.formulas)}">
+            <div class="panel__head">
+                <h2 class="panel__title">Formulas and rules</h2>
+                <span class="panel__meta" th:text="${#lists.size(pack.formulas)} + ' item(s)'">0</span>
+            </div>
+            <div class="panel__body">
+                <div class="formula-card" th:each="formula : ${pack.formulas}">
+                    <h3 th:text="${formula.name}">Formula</h3>
+                    <div class="formula__expr" th:text="${formula.expression}">E = mc^2</div>
+                    <p th:if="${formula.explanation != null and !formula.explanation.isBlank()}"
+                       th:text="${formula.explanation}">Explanation</p>
+                    <span class="source-tag" th:if="${formula.sourceReference != null}"
+                          th:text="${formula.sourceReference}">Page 4</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" th:if="${!#lists.isEmpty(pack.keyFacts)}">
+            <div class="panel__head">
+                <h2 class="panel__title">Key facts to remember</h2>
+            </div>
+            <div class="panel__body">
+                <ul class="key-points">
+                    <li th:each="fact : ${pack.keyFacts}" th:text="${fact}">Fact</li>
+                </ul>
+            </div>
+        </section>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(pack.formulas) and #lists.isEmpty(pack.keyFacts)}">
+            <h3>Nothing to list</h3>
+            <p>This document does not appear to contain formulas, rules or standalone facts.</p>
+        </div>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

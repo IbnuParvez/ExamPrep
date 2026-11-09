@@ -1,0 +1,18 @@
+target/
+
+# Build and test output
+*.class
+surefire-reports/
+
+# Local runtime data and secrets
+.env
+.env.local
+data/
+uploads/
+
+# IDE and OS noise
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Examination results')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Results</span>
+                <h1 class="page-title">Examination results</h1>
+                <p class="page-subtitle" th:text="${pack.title}">Study package</p>
+            </div>
+            <div class="btn-row">
+                <a class="btn btn--secondary" th:href="@{/study/{id}(id=${pack.studyPackId})}">Back to package</a>
+                <a class="btn btn--primary" th:href="@{/study/{id}/exam(id=${pack.studyPackId})}">Retake exam</a>
+            </div>
+        </div>
+
+        <section class="score-card">
+            <div class="score-value" th:text="${result.score} + ' / ' + ${result.totalQuestions}">0 / 0</div>
+            <div class="score-meta">
+                <span th:text="${result.percentage} + '%'">0%</span> ·
+                <span th:text="${fmt.duration(result.timeTakenSeconds)}">12 min</span> ·
+                submitted <span th:text="${fmt.relative(result.submittedAt)}">just now</span>
+            </div>
+        </section>
+
+        <section class="panel mb-3" th:if="${!#lists.isEmpty(result.revisionAreas)}">
+            <div class="panel__head">
+                <h2 class="panel__title">Areas to revisit</h2>
+            </div>
+            <div class="panel__body">
+                <ul class="revision-list">
+                    <li th:each="area : ${result.revisionAreas}" th:text="${area}">Revisit Page 3</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="panel mb-3" th:if="${#lists.isEmpty(result.revisionAreas)}">
+            <div class="panel__body">
+                <p class="mb-0">Every scored question was answered correctly. Continue with your revision notes and
+                    practise the short-answer questions to consolidate the material.</p>
+            </div>
+        </section>
+
+        <div class="page-head" style="border-bottom: 0; margin-bottom: 1rem;">
+            <div>
+                <h2 class="page-title" style="font-size: 1.3rem;">Question review</h2>
+                <p class="page-subtitle">Correct answers and explanations are shown after submission.</p>
+            </div>
+        </div>
+
+        <article class="result-item" th:each="item, iter : ${result.items}"
+                 th:classappend="${item.correct} ? 'result-item--correct' : 'result-item--incorrect'">
+            <div class="question-meta">
+                <span th:text="'Question ' + ${iter.count}">Question 1</span>
+                <span class="badge" th:classappend="${item.correct} ? 'badge--ready' : 'badge--failed'"
+                      th:text="${item.correct} ? 'Correct' : 'Incorrect'">Correct</span>
+                <span class="source-tag" th:if="${item.sourceReference != null}"
+                      th:text="${item.sourceReference}">Page 3</span>
+            </div>
+            <h3 th:text="${item.prompt}">Question</h3>
+            <p class="answer-line">
+                <strong>Your answer:</strong>
+                <span th:text="${item.givenAnswer} ?: 'Not answered'">Not answered</span>
+            </p>
+            <p class="answer-line">
+                <strong>Correct answer:</strong>
+                <span th:text="${item.correctAnswer}">Answer</span>
+            </p>
+            <p class="answer-line" th:text="${item.explanation}">Explanation</p>
+        </article>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

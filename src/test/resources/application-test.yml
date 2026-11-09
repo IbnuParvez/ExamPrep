@@ -1,0 +1,34 @@
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  thymeleaf:
+    cache: false
+
+app:
+  storage:
+    location: target/test-uploads
+  upload:
+    max-size-mb: 25
+  study:
+    default-question-count: 6
+    default-flashcard-count: 6
+    default-exam-duration-minutes: 20
+
+ai:
+  gemini:
+    api-key: ""
+    model: gemini-3.8-flash
+    timeout-seconds: 30
+    max-retries: 1
+    max-output-tokens: 4096
+
+logging:
+  level:
+    root: WARN
+    com.examprep: INFO
+    org.flywaydb: WARN
+    org.hibernate: WARN

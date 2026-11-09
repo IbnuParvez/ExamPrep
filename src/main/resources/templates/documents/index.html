@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Documents')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('documents')}"></header>
+
+<div class="app-frame">
+    <div class="page-head">
+        <div>
+            <span class="eyebrow">Source material</span>
+            <h1 class="page-title">Your documents</h1>
+            <p class="page-subtitle">Everything you upload is private to your account. Deleting a document also
+                removes the study packages generated from it.</p>
+        </div>
+    </div>
+
+    <div class="alert alert--error" th:if="${uploadError}" th:text="${uploadError}">
+        The upload could not be completed.
+    </div>
+    <div class="alert alert--success" th:if="${uploaded}">
+        <span th:text="${uploaded}">Your file</span> was uploaded and is being prepared.
+    </div>
+
+    <section class="panel mb-3">
+        <div class="panel__head">
+            <h2 class="panel__title">Upload a document</h2>
+            <span class="panel__meta">Maximum <span th:text="${maxUploadMb}">25</span> MB per file</span>
+        </div>
+        <div class="panel__body">
+            <div class="alert alert--error" data-upload-error hidden></div>
+            <form th:action="@{/documents}" method="post" enctype="multipart/form-data"
+                  data-upload-form
+                  th:attr="data-max-mb=${maxUploadMb},data-extensions=${supportedExtensionsCsv}">
+                <div class="upload-zone" data-drop-zone>
+                    <h3>Drop a document here</h3>
+                    <p>PDF, DOCX, DOC, PPTX, PPT, TXT, Markdown, RTF, ODT or ODP</p>
+                    <label class="btn btn--secondary" for="document-file">Choose a file</label>
+                    <input id="document-file" type="file" name="file" required
+                           accept=".pdf,.docx,.doc,.pptx,.ppt,.txt,.md,.markdown,.rtf,.odt,.odp">
+                    <p class="hint">The file is checked for its real content type, not just its extension.</p>
+                </div>
+                <div class="upload-progress" data-upload-progress>
+                    <div class="upload-progress__meta">
+                        <span data-upload-status>Uploading</span>
+                        <span data-upload-percent>0%</span>
+                    </div>
+                    <div class="progress"><div class="progress__bar"></div></div>
+                </div>
+                <div class="btn-row mt-2">
+                    <button class="btn btn--primary" type="submit">Upload document</button>
+                    <span class="hint">Text extraction starts immediately after the upload.</span>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel__head">
+            <h2 class="panel__title">Document library</h2>
+            <span class="panel__meta" th:text="${#lists.size(documents)} + ' document(s)'">0 documents</span>
+        </div>
+        <div class="panel__body panel__body--tight">
+            <div class="empty-state" th:if="${#lists.isEmpty(documents)}">
+                <h3>No documents yet</h3>
+                <p>Upload lecture notes, a handout or a textbook chapter to begin.</p>
+            </div>
+            <table class="table" th:unless="${#lists.isEmpty(documents)}">
+                <thead>
+                <tr>
+                    <th scope="col">Document</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Uploaded</th>
+                    <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="document : ${documents}">
+                    <td>
+                        <a th:href="@{/documents/{id}(id=${document.documentId})}"
+                           th:text="${document.originalFilename}">notes.pdf</a>
+                        <div class="doc-item__meta">
+                            <span th:text="${document.contentType}">application/pdf</span>
+                            <span th:if="${document.pageCount != null}"
+                                  th:text="${document.pageCount} + ' pages'">12 pages</span>
+                        </div>
+                    </td>
+                    <td th:text="${fmt.fileSize(document.sizeBytes)}">1.2 MB</td>
+                    <td>
+                        <span class="badge" th:classappend="'badge--' + ${#strings.toLowerCase(document.status)}"
+                              th:text="${document.status.label}">Ready</span>
+                        <div class="hint" th:if="${document.failureReason != null}"
+                             th:text="${document.failureReason}">Extraction failed</div>
+                    </td>
+                    <td th:text="${fmt.relative(document.createdAt)}">just now</td>
+                    <td class="text-right">
+                        <div class="btn-row" style="justify-content: flex-end;">
+                            <a class="btn btn--secondary btn--sm"
+                               th:href="@{/documents/{id}(id=${document.documentId})}">Open</a>
+                            <form th:action="@{/documents/{id}/delete(id=${document.documentId})}" method="post"
+                                  onsubmit="return confirm('Delete this document and every study package generated from it?');">
+                                <button class="btn btn--danger btn--sm" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/upload.js}"></script>
+</body>
+</html>

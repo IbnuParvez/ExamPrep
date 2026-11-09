@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Dashboard')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('dashboard')}"></header>
+
+<div class="app-frame">
+    <div class="page-head">
+        <div>
+            <span class="eyebrow">Your workspace</span>
+            <h1 class="page-title" th:text="'Welcome back, ' + (${displayName} ?: 'student')">Welcome back</h1>
+            <p class="page-subtitle">Upload a document to build a new study package, or continue where you left off.</p>
+        </div>
+        <div class="btn-row">
+            <a class="btn btn--primary" th:href="@{/documents}">Upload a document</a>
+            <a class="btn btn--secondary" th:href="@{/study}">Study packages</a>
+        </div>
+    </div>
+
+    <div class="alert alert--success" th:if="${documentDeleted}">
+        The document and its study material have been deleted.
+    </div>
+    <div class="alert alert--success" th:if="${studyPackDeleted}">
+        The study package has been deleted.
+    </div>
+
+    <div class="stat-grid">
+        <div class="stat">
+            <div class="stat__value" th:text="${progress.documentsReady}">0</div>
+            <div class="stat__label">Documents ready</div>
+        </div>
+        <div class="stat">
+            <div class="stat__value" th:text="${progress.studyPackCount}">0</div>
+            <div class="stat__label">Study packages</div>
+        </div>
+        <div class="stat">
+            <div class="stat__value" th:text="${progress.completedExams}">0</div>
+            <div class="stat__label">Mock exams completed</div>
+        </div>
+        <div class="stat">
+            <div class="stat__value" th:text="${progress.averageScorePercent} + '%'">0%</div>
+            <div class="stat__label">Average exam score</div>
+        </div>
+    </div>
+
+    <div class="stack">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Recent documents</h2>
+                <a class="btn btn--ghost btn--sm" th:href="@{/documents}">Manage documents</a>
+            </div>
+            <div class="panel__body panel__body--tight">
+                <div class="empty-state" th:if="${#lists.isEmpty(documents)}">
+                    <h3>No documents yet</h3>
+                    <p>Upload your first PDF, Word document or presentation to generate study material.</p>
+                    <a class="btn btn--primary btn--sm" th:href="@{/documents}">Upload a document</a>
+                </div>
+                <ul class="doc-list" th:unless="${#lists.isEmpty(documents)}">
+                    <li class="doc-item" th:each="document : ${documents}">
+                        <div class="doc-item__main">
+                            <a class="doc-item__name" th:href="@{/documents/{id}(id=${document.documentId})}"
+                               th:text="${document.originalFilename}">notes.pdf</a>
+                            <div class="doc-item__meta">
+                                <span th:text="${document.contentType}">application/pdf</span>
+                                <span th:text="${fmt.fileSize(document.sizeBytes)}">1.2 MB</span>
+                                <span th:text="${fmt.relative(document.createdAt)}">just now</span>
+                            </div>
+                        </div>
+                        <span class="badge" th:classappend="'badge--' + ${#strings.toLowerCase(document.status)}"
+                              th:text="${document.status.label}">Ready</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <div class="stat-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+            <section class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">Study packages</h2>
+                    <a class="btn btn--ghost btn--sm" th:href="@{/study}">View all</a>
+                </div>
+                <div class="panel__body panel__body--tight">
+                    <div class="empty-state" th:if="${#lists.isEmpty(progress.recentStudyPacks)}">
+                        <h3>Nothing generated yet</h3>
+                        <p>Upload a ready document and generate your first study package.</p>
+                    </div>
+                    <ul class="doc-list" th:unless="${#lists.isEmpty(progress.recentStudyPacks)}">
+                        <li class="doc-item" th:each="pack : ${progress.recentStudyPacks}">
+                            <div class="doc-item__main">
+                                <a class="doc-item__name" th:href="@{/study/{id}(id=${pack.studyPackId})}"
+                                   th:text="${pack.title}">Study package</a>
+                                <div class="doc-item__meta">
+                                    <span th:text="${pack.status.label}">Ready</span>
+                                    <span th:text="${fmt.relative(pack.createdAt)}">just now</span>
+                                </div>
+                            </div>
+                            <span class="badge" th:classappend="'badge--' + ${#strings.toLowerCase(pack.status)}"
+                                  th:text="${pack.status.label}">Ready</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">Recent examination results</h2>
+                    <span class="panel__meta"
+                          th:text="${progress.flashcardsReviewed} + ' flashcards reviewed'">0 flashcards reviewed</span>
+                </div>
+                <div class="panel__body panel__body--tight">
+                    <div class="empty-state" th:if="${#lists.isEmpty(progress.recentExams)}">
+                        <h3>No results yet</h3>
+                        <p>Open a study package and take a mock examination to see your score here.</p>
+                    </div>
+                    <table class="table" th:unless="${#lists.isEmpty(progress.recentExams)}">
+                        <thead>
+                        <tr>
+                            <th scope="col">Study package</th>
+                            <th scope="col">Score</th>
+                            <th scope="col">Time</th>
+                            <th scope="col">Taken</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="exam : ${progress.recentExams}">
+                            <td>
+                                <a th:href="@{/study/{id}/results/{attemptId}(id=${exam.studyPackId},attemptId=${exam.attemptId})}"
+                                   th:text="${exam.studyPackTitle}">Package</a>
+                            </td>
+                            <td th:text="${exam.score} + ' / ' + ${exam.totalQuestions}">0 / 0</td>
+                            <td th:text="${fmt.duration(exam.timeTakenSeconds)}">0 min</td>
+                            <td th:text="${fmt.relative(exam.submittedAt)}">just now</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

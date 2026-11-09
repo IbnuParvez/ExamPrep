@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Definitions')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Reference</span>
+                <h1 class="page-title">Important definitions</h1>
+                <p class="page-subtitle">Terms taken from the document, with the source location so you can check
+                    the original wording.</p>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(pack.definitions)}">
+            <h3>No definitions were found</h3>
+            <p>The document may not contain formal definitions, or they were not extracted.</p>
+        </div>
+
+        <div class="panel" th:unless="${#lists.isEmpty(pack.definitions)}">
+            <div class="panel__body">
+                <dl class="glossary">
+                    <div class="glossary-item" th:each="definition : ${pack.definitions}">
+                        <dt th:text="${definition.term}">Term</dt>
+                        <dd>
+                            <span th:text="${definition.definition}">Definition</span>
+                            <div th:if="${definition.sourceReference != null}">
+                                <span class="source-tag" th:text="${definition.sourceReference}">Page 3</span>
+                            </div>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

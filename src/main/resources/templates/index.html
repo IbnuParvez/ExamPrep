@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Study from your own course documents')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: publicHeader}"></header>
+
+<main class="site-main">
+    <div class="container">
+        <section class="hero">
+            <div class="hero__content">
+                <span class="eyebrow">Examination preparation, built around your material</span>
+                <h1>Turn your course documents into a study plan you can actually use.</h1>
+                <p class="hero__lead">
+                    Upload your lecture notes, handouts or textbooks. ExamPrep reads the material, builds
+                    structured revision notes, flashcards, practice questions and a timed mock examination,
+                    and answers your questions using only what your document contains.
+                </p>
+                <div class="hero__actions">
+                    <a class="btn btn--primary" th:href="@{/register}">Create your account</a>
+                    <a class="btn btn--secondary" th:href="@{/login}">Sign in</a>
+                </div>
+                <p class="hero__note">
+                    Up to <span th:text="${maxUploadMb}">25</span> MB per document. Text is extracted on
+                    our server and sent to Google's Gemini API to generate study resources.
+                </p>
+            </div>
+            <aside class="hero__panel" aria-label="How ExamPrep works">
+                <h2>How it works</h2>
+                <ol class="workflow">
+                    <li><span class="workflow__index">01</span><span>Create an account and open your dashboard.</span></li>
+                    <li><span class="workflow__index">02</span><span>Upload a PDF, Word document, presentation or text file.</span></li>
+                    <li><span class="workflow__index">03</span><span>The document is parsed and divided into referenced sections.</span></li>
+                    <li><span class="workflow__index">04</span><span>Gemini builds your study package from those sections.</span></li>
+                    <li><span class="workflow__index">05</span><span>Revise, practise, sit mock exams and ask the tutor questions.</span></li>
+                </ol>
+            </aside>
+        </section>
+
+        <section class="section">
+            <div class="section__head">
+                <span class="eyebrow">What you get</span>
+                <h2>Everything is generated from your document</h2>
+                <p>Each resource keeps a reference back to the page, slide or section it came from, so you can
+                    check the original material whenever you need to.</p>
+            </div>
+            <div class="feature-grid">
+                <article class="feature">
+                    <h3>Structured revision material</h3>
+                    <p>An overview, organised topics, detailed revision notes, a glossary and a formula reference,
+                        written for examination preparation rather than general reading.</p>
+                </article>
+                <article class="feature">
+                    <h3>Practice with feedback</h3>
+                    <p>Multiple-choice, true/false and short-answer questions with explanations. Mock examinations
+                        are timed, scored on the server and reviewed question by question.</p>
+                </article>
+                <article class="feature">
+                    <h3>A tutor grounded in your notes</h3>
+                    <p>Ask for a simpler explanation or another example. The tutor retrieves the most relevant
+                        sections of your document and says so when the material does not cover the answer.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section__head">
+                <span class="eyebrow">Supported material</span>
+                <h2>Bring the documents you already study from</h2>
+                <p>PDFs keep page references, presentations keep slide references, and Word documents keep their
+                    heading structure.</p>
+                <ul class="format-list">
+                    <li th:each="format : ${supportedFormats}" th:text="${format}">PDF</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="panel">
+                <div class="panel__head">
+                    <h2 class="panel__title">A note on privacy and accuracy</h2>
+                </div>
+                <div class="panel__body prose">
+                    <p>Extracted text from your uploads is sent to Google's Gemini API to generate study material.
+                        Your documents are stored privately and are never served from a public URL. You can delete a
+                        document, and its study packages, at any time.</p>
+                    <p>Generated resources are study assistance, not a replacement for your course material or your
+                        lecturer's guidance. Always check important details against the original document.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

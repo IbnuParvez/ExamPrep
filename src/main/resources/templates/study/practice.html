@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Practice questions')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Practice</span>
+                <h1 class="page-title">Practice questions</h1>
+                <p class="page-subtitle">Check your answer after each question. Explanations and source locations
+                    appear once you ask for feedback.</p>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(questions)}">
+            <h3>No practice questions were generated</h3>
+            <p>Generate a new study package to try again.</p>
+        </div>
+
+        <div data-practice th:attr="data-study-pack=${pack.studyPackId}" th:unless="${#lists.isEmpty(questions)}">
+            <article class="question-card" th:each="question, iter : ${questions}"
+                     data-question th:attr="data-question-id=${question.id},data-type=${question.type.name()}">
+                <div class="question-meta">
+                    <span th:text="'Question ' + ${iter.count}">Question 1</span>
+                    <span class="badge badge--difficulty" th:text="${question.difficulty.label}">Medium</span>
+                    <span th:text="${question.type.label}">Multiple choice</span>
+                    <span class="source-tag" th:if="${question.sourceReference != null}"
+                          th:text="${question.sourceReference}">Page 3</span>
+                </div>
+                <p class="question-prompt" th:text="${question.prompt}">Question</p>
+
+                <div class="option-list" th:if="${question.type.name() != 'SHORT_ANSWER'}">
+                    <label class="option" th:each="option, optionIter : ${question.options}">
+                        <input type="radio" th:name="'question-' + ${question.id}"
+                               th:value="${option}"
+                               th:id="'q-' + ${question.id} + '-' + ${optionIter.index}">
+                        <span th:text="${option}">Option</span>
+                    </label>
+                </div>
+
+                <div class="field" th:if="${question.type.name() == 'SHORT_ANSWER'}">
+                    <label th:for="'short-' + ${question.id}">Your answer</label>
+                    <textarea th:id="'short-' + ${question.id}" rows="3"
+                              placeholder="Write your answer here"></textarea>
+                </div>
+
+                <button class="btn btn--primary btn--sm" type="button" data-check-answer>Check answer</button>
+                <div class="feedback" data-feedback hidden></div>
+            </article>
+        </div>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/practice.js}"></script>
+</body>
+</html>

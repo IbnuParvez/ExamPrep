@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Generating study package')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame" style="max-width: 44rem;">
+    <div class="page-head">
+        <div>
+            <span class="eyebrow">Generating</span>
+            <h1 class="page-title">Building your study package</h1>
+            <p class="page-subtitle">Gemini is reading the extracted material and writing your revision resources.
+                This usually takes under a minute, longer for large documents.</p>
+        </div>
+    </div>
+
+    <div class="alert alert--error" th:if="${status.status.name() == 'FAILED'}">
+        <p><strong>Generation did not finish.</strong></p>
+        <p th:text="${status.failureReason}">Reason</p>
+        <p class="small">Open the source document to try again with the same or different settings.</p>
+    </div>
+
+    <section class="panel" th:if="${status.status.name() != 'FAILED'}"
+             th:attr="data-poll-url=@{/api/study/{id}/status(id=${studyPackId})},data-terminal='READY,FAILED'">
+        <div class="panel__head">
+            <h2 class="panel__title">Progress</h2>
+            <span class="badge badge--processing" th:text="${status.status.label}">Generating</span>
+        </div>
+        <div class="panel__body">
+            <p class="muted" data-poll-message
+               th:text="${status.progressMessage} ?: 'Waiting to start...'">Waiting to start...</p>
+            <div class="progress"><div class="progress__bar" style="width: 40%"></div></div>
+            <p class="hint">You can leave this page. Generation continues on the server and the package will be
+                waiting in your study packages list.</p>
+        </div>
+    </section>
+
+    <div class="btn-row mt-3">
+        <a class="btn btn--secondary" th:href="@{/study}">All study packages</a>
+        <a class="btn btn--ghost" th:href="@{/dashboard}">Dashboard</a>
+    </div>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/status-poll.js}"></script>
+</body>
+</html>

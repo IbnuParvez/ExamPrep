@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Mock examination')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Assessment</span>
+                <h1 class="page-title">Mock examination</h1>
+                <p class="page-subtitle">
+                    <span th:text="${#lists.size(questions)}">10</span> questions ·
+                    <span th:text="${durationMinutes}">30</span> minutes.
+                    Answers are scored after you submit; the correct answers are not present in this page.
+                </p>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(questions)}">
+            <h3>No examination questions available</h3>
+            <p>This package does not contain automatically scored questions.</p>
+        </div>
+
+        <div class="exam-layout" th:unless="${#lists.isEmpty(questions)}" data-exam
+             th:attr="data-study-pack=${pack.studyPackId},
+                      data-duration-seconds=${examSeconds},
+                      data-result-url='/study/' + ${pack.studyPackId} + '/results/'">
+            <aside class="exam-nav">
+                <div class="exam-timer" data-exam-timer aria-live="polite">--:--</div>
+                <p class="hint mt-1">Question navigation</p>
+                <div class="exam-nav__grid" data-exam-nav></div>
+                <button class="btn btn--primary btn--block" type="button" data-exam-submit>Submit examination</button>
+            </aside>
+
+            <form data-exam-form onsubmit="return false;">
+                <article class="exam-question is-hidden" th:each="question, iter : ${questions}"
+                         data-exam-question
+                         th:attr="data-question-id=${question.id},data-type=${question.type.name()}"
+                         th:classappend="${iter.index == 0} ? '' : 'is-hidden'">
+                    <div class="question-card">
+                        <div class="question-meta">
+                            <span th:text="'Question ' + ${iter.count} + ' of ' + ${#lists.size(questions)}">
+                                Question 1 of 10</span>
+                            <span class="badge badge--difficulty" th:text="${question.difficulty.label}">Medium</span>
+                            <span th:text="${question.type.label}">Multiple choice</span>
+                        </div>
+                        <p class="question-prompt" th:text="${question.prompt}">Question</p>
+                        <div class="option-list">
+                            <label class="option" th:each="option, optionIter : ${question.options}">
+                                <input type="radio"
+                                       th:name="'exam-' + ${question.id}"
+                                       th:value="${option}"
+                                       th:id="'exam-' + ${question.id} + '-' + ${optionIter.index}">
+                                <span th:text="${option}">Option</span>
+                            </label>
+                        </div>
+                    </div>
+                </article>
+
+                <div class="exam-actions">
+                    <button class="btn btn--secondary btn--sm" type="button" data-exam-prev>Previous</button>
+                    <button class="btn btn--secondary btn--sm" type="button" data-exam-next>Next</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/exam.js}"></script>
+</body>
+</html>

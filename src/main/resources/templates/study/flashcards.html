@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Flashcards')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame app-frame--aside">
+    <aside th:replace="~{layout/fragments :: studyAside}"></aside>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <span class="eyebrow">Active recall</span>
+                <h1 class="page-title">Flashcards</h1>
+                <p class="page-subtitle">Reveal the answer, then move on. Use the arrow keys to navigate and the
+                    space bar to reveal.</p>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(flashcards)}">
+            <h3>No flashcards were generated</h3>
+            <p>Generate a new study package to try again.</p>
+        </div>
+
+        <div class="flashcard-shell" th:unless="${#lists.isEmpty(flashcards)}">
+            <div data-flashcard-deck
+                 th:attr="data-review-url='/api/study/' + ${pack.studyPackId} + '/flashcards/{flashcardId}/review'">
+                <article class="flashcard" th:each="card, iter : ${flashcards}"
+                         data-flashcard th:attr="data-card-id=${card.id}"
+                         th:classappend="${iter.index != 0} ? 'is-hidden'">
+                    <div class="flashcard__eyebrow" th:text="'Card ' + ${iter.count} + ' of ' + ${#lists.size(flashcards)}">
+                        Card 1 of 10
+                    </div>
+                    <p class="flashcard__front" th:text="${card.front}">Question</p>
+                    <div class="flashcard__back" th:text="${card.back}">Answer</div>
+                    <div class="flashcard__source" th:if="${card.sourceReference != null}">
+                        <span class="source-tag" th:text="${card.sourceReference}">Page 3</span>
+                    </div>
+                </article>
+            </div>
+
+            <div class="deck-controls">
+                <button class="btn btn--secondary btn--sm" type="button" data-flashcard-prev>Previous</button>
+                <button class="btn btn--primary btn--sm" type="button" data-flashcard-reveal
+                        aria-expanded="false">Reveal answer</button>
+                <button class="btn btn--secondary btn--sm" type="button" data-flashcard-next>Next</button>
+                <span class="deck-progress" data-deck-position>1 / 10</span>
+            </div>
+            <p class="hint">Reviewed cards are recorded in your study activity.</p>
+        </div>
+    </main>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/flashcards.js}"></script>
+</body>
+</html>

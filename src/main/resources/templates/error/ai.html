@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('AI service unavailable')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: publicHeader}"></header>
+<main class="site-main">
+    <div class="container">
+        <div class="error-shell">
+            <span class="eyebrow">AI features</span>
+            <h1 th:text="${title}">The AI service is unavailable</h1>
+            <p th:text="${message}">Details</p>
+            <p class="hint" th:if="${hint != null}" th:text="${hint}">Hint</p>
+            <div class="btn-row" style="justify-content: center;">
+                <a class="btn btn--primary" th:href="@{/documents}">Open documents</a>
+                <a class="btn btn--secondary" th:href="@{/dashboard}">Dashboard</a>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+</body>
+</html>

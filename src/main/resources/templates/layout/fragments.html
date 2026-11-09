@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="ExamPrep turns your course documents into revision notes, flashcards, practice questions and mock examinations.">
+    <title th:text="${title} + ' · ExamPrep'">ExamPrep</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="icon" type="image/svg+xml" th:href="@{/images/favicon.svg}">
+    <meta name="_csrf" th:content="${_csrf != null} ? ${_csrf.token} : ''">
+    <meta name="_csrf_header" th:content="${_csrf != null} ? ${_csrf.headerName} : 'X-CSRF-TOKEN'">
+</head>
+<body>
+
+<header th:fragment="publicHeader" class="site-header">
+    <div class="container site-header__inner">
+        <a class="brand" th:href="@{/}">
+            <span class="brand__mark" aria-hidden="true">EP</span>
+            <span>ExamPrep<span class="brand__sub">Document-based study workspace</span></span>
+        </a>
+        <nav class="site-nav" aria-label="Account">
+            <a class="site-nav__link" th:href="@{/login}">Sign in</a>
+            <a class="btn btn--primary btn--sm" th:href="@{/register}">Create account</a>
+        </nav>
+    </div>
+</header>
+
+<header th:fragment="appHeader(active)" class="app-topbar">
+    <div class="container app-topbar__inner">
+        <a class="brand" th:href="@{/dashboard}">
+            <span class="brand__mark" aria-hidden="true">EP</span>
+            <span>ExamPrep<span class="brand__sub">Study workspace</span></span>
+        </a>
+        <nav class="app-nav" aria-label="Main">
+            <a class="app-nav__link" th:classappend="${active == 'dashboard'} ? 'is-active'"
+               th:href="@{/dashboard}">Dashboard</a>
+            <a class="app-nav__link" th:classappend="${active == 'documents'} ? 'is-active'"
+               th:href="@{/documents}">Documents</a>
+            <a class="app-nav__link" th:classappend="${active == 'study'} ? 'is-active'"
+               th:href="@{/study}">Study packages</a>
+        </nav>
+        <div class="app-user">
+            <span th:text="${currentUser} ?: 'Student'">Student</span>
+            <form th:action="@{/logout}" method="post">
+                <button class="btn btn--ghost btn--sm" type="submit">Sign out</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<nav th:fragment="studyNav(active)" class="study-nav" aria-label="Study package sections">
+    <div class="study-nav__group">Overview</div>
+    <a class="study-nav__link" th:classappend="${active == 'overview'} ? 'is-active'"
+       th:href="@{/study/{id}(id=${pack.studyPackId})}">Document overview</a>
+    <a class="study-nav__link" th:classappend="${active == 'topics'} ? 'is-active'"
+       th:href="@{/study/{id}/topics(id=${pack.studyPackId})}">Topics</a>
+    <a class="study-nav__link" th:classappend="${active == 'notes'} ? 'is-active'"
+       th:href="@{/study/{id}/notes(id=${pack.studyPackId})}">Revision notes</a>
+
+    <div class="study-nav__group">Reference</div>
+    <a class="study-nav__link" th:classappend="${active == 'definitions'} ? 'is-active'"
+       th:href="@{/study/{id}/definitions(id=${pack.studyPackId})}">Definitions</a>
+    <a class="study-nav__link" th:classappend="${active == 'formulas'} ? 'is-active'"
+       th:href="@{/study/{id}/formulas(id=${pack.studyPackId})}">Formulas and key facts</a>
+
+    <div class="study-nav__group">Practise</div>
+    <a class="study-nav__link" th:classappend="${active == 'flashcards'} ? 'is-active'"
+       th:href="@{/study/{id}/flashcards(id=${pack.studyPackId})}">Flashcards</a>
+    <a class="study-nav__link" th:classappend="${active == 'practice'} ? 'is-active'"
+       th:href="@{/study/{id}/practice(id=${pack.studyPackId})}">Practice questions</a>
+    <a class="study-nav__link" th:classappend="${active == 'exam'} ? 'is-active'"
+       th:href="@{/study/{id}/exam(id=${pack.studyPackId})}">Mock examination</a>
+    <a class="study-nav__link" th:classappend="${active == 'tutor'} ? 'is-active'"
+       th:href="@{/study/{id}/tutor(id=${pack.studyPackId})}">AI tutor</a>
+</nav>
+
+<footer th:fragment="footer" class="site-footer">
+    <div class="container site-footer__inner">
+        <span>ExamPrep · built for document-based revision</span>
+        <span>Uploaded material is processed with Google's Gemini API to generate study resources.</span>
+    </div>
+</footer>
+
+<aside th:fragment="studyAside" class="app-aside">
+    <div class="aside-panel">
+        <h3 th:text="${pack.title}">Study package</h3>
+        <p th:text="${pack.documentFilename} ?: 'Uploaded document'">document.pdf</p>
+    </div>
+    <nav th:replace="~{layout/fragments :: studyNav(${activeSection})}"></nav>
+    <div class="aside-panel">
+        <p><a th:href="@{/study}">All study packages</a></p>
+        <p th:if="${pack.documentId != null}">
+            <a th:href="@{/documents/{id}(id=${pack.documentId})}">View source document</a>
+        </p>
+        <form th:action="@{/study/{id}/delete(id=${pack.studyPackId})}" method="post"
+              onsubmit="return confirm('Delete this study package and its practice history?');">
+            <button class="btn btn--danger btn--sm btn--block" type="submit">Delete package</button>
+        </form>
+    </div>
+</aside>
+
+</body>
+</html>

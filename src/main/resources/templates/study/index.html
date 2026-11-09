@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head('Study packages')}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('study')}"></header>
+
+<div class="app-frame">
+    <div class="page-head">
+        <div>
+            <span class="eyebrow">Generated material</span>
+            <h1 class="page-title">Study packages</h1>
+            <p class="page-subtitle">Each package belongs to one document and keeps its revision material,
+                flashcards, questions and tutor conversation together.</p>
+        </div>
+        <div class="btn-row">
+            <a class="btn btn--primary" th:href="@{/documents}">Generate from a document</a>
+        </div>
+    </div>
+
+    <div class="alert alert--success" th:if="${studyPackDeleted}">
+        The study package has been deleted.
+    </div>
+
+    <section class="panel">
+        <div class="panel__head">
+            <h2 class="panel__title">Your packages</h2>
+            <span class="panel__meta" th:text="${#lists.size(studyPacks)} + ' package(s)'">0 packages</span>
+        </div>
+        <div class="panel__body panel__body--tight">
+            <div class="empty-state" th:if="${#lists.isEmpty(studyPacks)}">
+                <h3>No study packages yet</h3>
+                <p>Upload a document, wait for extraction to finish, then generate your first package.</p>
+                <a class="btn btn--primary btn--sm" th:href="@{/documents}">Open documents</a>
+            </div>
+            <table class="table" th:unless="${#lists.isEmpty(studyPacks)}">
+                <thead>
+                <tr>
+                    <th scope="col">Package</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Cards</th>
+                    <th scope="col">Questions</th>
+                    <th scope="col">Best exam</th>
+                    <th scope="col">Created</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="pack : ${studyPacks}">
+                    <td>
+                        <a th:href="@{/study/{id}(id=${pack.studyPackId})}" th:text="${pack.title}">Study package</a>
+                        <div class="doc-item__meta">
+                            <span th:text="${pack.documentFilename} ?: 'Source document'">notes.pdf</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge" th:classappend="'badge--' + ${#strings.toLowerCase(pack.status)}"
+                              th:text="${pack.status.label}">Ready</span>
+                    </td>
+                    <td th:text="${pack.flashcardCount}">20</td>
+                    <td th:text="${pack.questionCount}">15</td>
+                    <td th:if="${pack.latestScore != null}"
+                        th:text="${pack.latestScore} + ' / ' + ${pack.latestTotal}">8 / 10</td>
+                    <td th:if="${pack.latestScore == null}" class="muted">Not taken</td>
+                    <td th:text="${fmt.relative(pack.createdAt)}">just now</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

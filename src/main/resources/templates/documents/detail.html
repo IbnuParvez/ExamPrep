@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/fragments :: head(${document.originalFilename})}"></head>
+<body>
+<header th:replace="~{layout/fragments :: appHeader('documents')}"></header>
+
+<div class="app-frame">
+    <div class="page-head">
+        <div>
+            <span class="eyebrow">Document</span>
+            <h1 class="page-title" th:text="${document.originalFilename}">notes.pdf</h1>
+            <p class="page-subtitle">
+                <span class="badge" th:classappend="'badge--' + ${#strings.toLowerCase(document.status)}"
+                      th:text="${document.status.label}">Ready</span>
+                <span th:text="' · ' + ${fmt.fileSize(document.sizeBytes)}"> · 1.2 MB</span>
+                <span th:if="${document.pageCount != null}"
+                      th:text="' · ' + ${document.pageCount} + ' pages'"> · 12 pages</span>
+                <span th:if="${document.chunkCount > 0}"
+                      th:text="' · ' + ${document.chunkCount} + ' extracted sections'"> · 14 sections</span>
+            </p>
+        </div>
+        <div class="btn-row">
+            <a class="btn btn--secondary" th:href="@{/documents}">Back to documents</a>
+        </div>
+    </div>
+
+    <div class="alert alert--success" th:if="${uploaded}">
+        <span th:text="${uploaded}">File</span> was uploaded.
+    </div>
+
+    <div class="alert alert--error" th:if="${document.failureReason != null}">
+        <p><strong>Extraction did not finish.</strong></p>
+        <p th:text="${document.failureReason}">Reason</p>
+        <p class="small">Delete this document and upload a corrected or text-based version.</p>
+    </div>
+
+    <div th:if="${processing}">
+        <section class="panel mb-3"
+                 th:attr="data-poll-url=@{/api/documents/{id}/status(id=${document.documentId})},data-terminal='READY,FAILED'">
+            <div class="panel__head">
+                <h2 class="panel__title">Preparing your document</h2>
+                <span class="panel__meta">This page updates automatically</span>
+            </div>
+            <div class="panel__body">
+                <p class="muted" data-poll-message>Reading the file and extracting text...</p>
+                <div class="progress"><div class="progress__bar" style="width: 35%"></div></div>
+                <p class="hint">Extraction usually takes a few seconds. You can leave this page; processing
+                    continues in the background.</p>
+            </div>
+        </section>
+    </div>
+
+    <div th:if="${document.status.name() == 'READY'}" class="stack">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Generate a study package</h2>
+                <span class="panel__meta">Runs in the background</span>
+            </div>
+            <div class="panel__body">
+                <p class="muted">Gemini will build an overview, topics, revision notes, definitions, formulas,
+                    flashcards, practice questions and a mock examination from this document. Generation can take
+                    a minute or two for longer documents.</p>
+                <form th:action="@{/documents/{id}/study-packs(id=${document.documentId})}"
+                      th:object="${optionsForm}" method="post">
+                    <div class="form-grid form-grid--three">
+                        <div class="field">
+                            <label for="language">Study language</label>
+                            <select id="language" th:field="*{language}">
+                                <option value="English">English</option>
+                                <option value="French">French</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="German">German</option>
+                                <option value="Portuguese">Portuguese</option>
+                                <option value="Arabic">Arabic</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Urdu">Urdu</option>
+                                <option value="Chinese">Chinese</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="academicLevel">Academic level</label>
+                            <select id="academicLevel" th:field="*{academicLevel}">
+                                <option value="High school">High school</option>
+                                <option value="Undergraduate">Undergraduate</option>
+                                <option value="Postgraduate">Postgraduate</option>
+                                <option value="Professional">Professional</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="examDate">Examination date (optional)</label>
+                            <input type="date" id="examDate" th:field="*{examDate}">
+                        </div>
+                        <div class="field">
+                            <label for="questionCount">Practice questions</label>
+                            <input type="number" id="questionCount" th:field="*{questionCount}"
+                                   th:attr="min=5,max=${maxQuestionCount}" th:value="${defaultQuestionCount}">
+                            <span class="hint">Up to <span th:text="${maxQuestionCount}">40</span></span>
+                        </div>
+                        <div class="field">
+                            <label for="flashcardCount">Flashcards</label>
+                            <input type="number" id="flashcardCount" th:field="*{flashcardCount}"
+                                   th:attr="min=5,max=${maxFlashcardCount}" th:value="${defaultFlashcardCount}">
+                            <span class="hint">Up to <span th:text="${maxFlashcardCount}">60</span></span>
+                        </div>
+                        <div class="field">
+                            <label for="examDurationMinutes">Mock exam duration (minutes)</label>
+                            <input type="number" id="examDurationMinutes" th:field="*{examDurationMinutes}"
+                                   min="5" max="180" th:value="${defaultExamDuration}">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn--primary" type="submit">Generate study package</button>
+                        <span class="hint">A document can produce several packages with different settings.</span>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Document details</h2>
+            </div>
+            <div class="panel__body">
+                <table class="table">
+                    <tbody>
+                    <tr>
+                        <th scope="row">Content type</th>
+                        <td th:text="${document.contentType}">application/pdf</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Uploaded</th>
+                        <td th:text="${fmt.dateTime(document.createdAt)}">1 Jan 2026</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Last updated</th>
+                        <td th:text="${fmt.dateTime(document.updatedAt)}">1 Jan 2026</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Extracted characters</th>
+                        <td th:text="${document.characterCount != null ? document.characterCount : '—'}">18000</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Extracted sections</th>
+                        <td th:text="${document.chunkCount}">14</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <form class="mt-2" th:action="@{/documents/{id}/delete(id=${document.documentId})}" method="post"
+                      onsubmit="return confirm('Delete this document and every study package generated from it?');">
+                    <button class="btn btn--danger btn--sm" type="submit">Delete document</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<footer th:replace="~{layout/fragments :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/status-poll.js}"></script>
+</body>
+</html>
