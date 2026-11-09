@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Access denied — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="card" style="max-width:620px;margin:2rem auto;text-align:center;padding:2.5rem">
+        <p class="eyebrow">403</p>
+        <h1>This area is not available to you</h1>
+        <p>You are signed in, but this page or record belongs to another account, or your session no longer
+            allows the action.</p>
+        <div class="button-row" style="justify-content:center;margin-top:1.5rem">
+            <a class="button" th:href="@{/dashboard}">Back to dashboard</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

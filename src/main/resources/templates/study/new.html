@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Generate a study package — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">New study package</p>
+        <h1>How should we prepare this material?</h1>
+        <p class="lede" th:text="|Source: ${document.originalFilename}|">Source: notes.pdf</p>
+    </div>
+
+    <div class="content-grid">
+        <section>
+            <form class="form form-wide" th:action="@{/documents/{id}/study(id=${document.id})}"
+                  th:object="${form}" method="post">
+                <div class="card">
+                    <h2>Study context</h2>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="language">Language of the study material</label>
+                            <input type="text" id="language" th:field="*{language}" maxlength="40">
+                        </div>
+                        <div class="field">
+                            <label for="academicLevel">Academic level</label>
+                            <select id="academicLevel" th:field="*{academicLevel}">
+                                <option value="Secondary school">Secondary school</option>
+                                <option value="Undergraduate">Undergraduate</option>
+                                <option value="Postgraduate">Postgraduate</option>
+                                <option value="Professional examination">Professional examination</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="examDate">Exam date <span class="text-muted">(optional)</span></label>
+                        <input type="date" id="examDate" th:field="*{examDate}">
+                        <p class="hint">Used to prioritise revision, not to schedule reminders.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Materials to generate</h2>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="flashcardCount">Flashcards</label>
+                            <input type="number" id="flashcardCount" th:field="*{flashcardCount}" min="4" max="40">
+                        </div>
+                        <div class="field">
+                            <label for="questionCount">Practice questions</label>
+                            <input type="number" id="questionCount" th:field="*{questionCount}" min="5" max="30">
+                        </div>
+                        <div class="field">
+                            <label for="examQuestionCount">Mock exam questions</label>
+                            <input type="number" id="examQuestionCount" th:field="*{examQuestionCount}" min="4" max="20">
+                            <p class="hint">Multiple-choice and true/false questions only, so marking is automatic.</p>
+                        </div>
+                        <div class="field">
+                            <label for="examDurationMinutes">Exam duration (minutes)</label>
+                            <input type="number" id="examDurationMinutes" th:field="*{examDurationMinutes}"
+                                   min="5" max="120">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="button" type="submit">Generate study package</button>
+                    <a class="button button-ghost" th:href="@{/documents/{id}(id=${document.id})}">Cancel</a>
+                </div>
+                <p class="hint">Generation runs in the background and usually finishes within a minute or two,
+                    depending on the size of the document.</p>
+            </form>
+        </section>
+
+        <aside class="side-panel">
+            <h3>What you will get</h3>
+            <ul>
+                <li>Document overview and learning objectives</li>
+                <li>Topics, revision notes and key concepts</li>
+                <li>Definitions, formulas and key facts from the material</li>
+                <li>Interactive flashcards</li>
+                <li>Practice questions with explanations</li>
+                <li>A timed mock examination</li>
+                <li>A tutor that answers from this document</li>
+            </ul>
+            <h3 style="margin-top:1.3rem">Source</h3>
+            <p class="text-small text-muted" th:text="|${document.chunkCount} citable chunks extracted|">
+                0 citable chunks extracted</p>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

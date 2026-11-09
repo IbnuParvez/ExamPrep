@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Privacy notice — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Privacy</p>
+        <h1>How ExamPrep handles your material</h1>
+        <p class="lede">A plain-language summary of what happens to the documents you upload.</p>
+    </div>
+
+    <div class="content-grid">
+        <article class="prose">
+            <h2>What is stored</h2>
+            <p>ExamPrep stores your account details (name, email, BCrypt password hash), the documents you
+                upload, the text extracted from them, and the study packages, examinations and tutor messages
+                generated for you. Uploaded files are kept in private storage and are never served from a public
+                URL.</p>
+
+            <h2>How Google Gemini is used</h2>
+            <p>To generate study material, relevant extracted text from your document is sent to Google's
+                Gemini API, along with your study preferences. The API key stays on the server and is never
+                exposed to your browser. Tutor questions are sent together with the most relevant document
+                sections so answers can be grounded in your material.</p>
+            <p>ExamPrep does not send your whole document in one request when it is large: it analyses sections
+                and combines the results. Prompts and responses are not written to application logs.</p>
+
+            <h2>What is not done</h2>
+            <ul>
+                <li>Your documents are not published, shared with other students or used as public examples.</li>
+                <li>No advertising or analytics trackers are embedded in the application.</li>
+                <li>No third-party AI provider other than the configuration described above is used.</li>
+            </ul>
+
+            <h2>Deleting your data</h2>
+            <p>Deleting a document removes the stored file, its extracted text and every study package generated
+                from it, including examinations and tutor conversations. Deleting a study package removes its
+                flashcards, questions and attempts.</p>
+
+            <h2>Generated content</h2>
+            <p>AI-generated summaries, notes, questions and answers are educational assistance. They can be
+                incomplete or incorrect, so verify important details against your official course material.</p>
+        </article>
+
+        <aside class="side-panel">
+            <h3>Quick facts</h3>
+            <ul>
+                <li>Documents are private to your account.</li>
+                <li>API keys never reach the browser.</li>
+                <li>Uploaded text is processed by Gemini only when you generate study material or ask the tutor.</li>
+                <li>You can delete documents and packages at any time.</li>
+            </ul>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

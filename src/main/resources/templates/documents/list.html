@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Documents — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <div class="toolbar" style="margin-bottom:0.4rem">
+            <div>
+                <p class="eyebrow">Library</p>
+                <h1>Your documents</h1>
+            </div>
+            <a class="button" th:href="@{/documents/upload}">Upload document</a>
+        </div>
+        <p class="lede">Course material is private to your account. Delete a document to remove its extracted
+            text and every study package built from it.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice != null}" th:text="${notice}">Done.</div>
+
+    <div class="empty" th:if="${#lists.isEmpty(documents)}">
+        <h3>Your library is empty</h3>
+        <p>Upload a PDF, Word document or slide deck. ExamPrep extracts the text and keeps page, slide or
+            section references so your study material can point back to the source.</p>
+        <a class="button" th:href="@{/documents/upload}">Upload a document</a>
+    </div>
+
+    <div class="panel" th:unless="${#lists.isEmpty(documents)}">
+        <div class="panel-header">
+            <h2 th:text="${#lists.size(documents) + ' document' + (#lists.size(documents) == 1 ? '' : 's')}">
+                Documents</h2>
+            <span class="text-small text-muted">Maximum 25 MB per file</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th class="numeric">Size</th>
+                    <th class="numeric">Chunks</th>
+                    <th>Added</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="doc : ${documents}">
+                    <td class="cell-title">
+                        <a th:href="@{/documents/{id}(id=${doc.id})}" th:text="${doc.originalFilename}">notes.pdf</a>
+                    </td>
+                    <td class="mono" th:text="${doc.contentType}">application/pdf</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${doc.status.name() == 'READY'} ? 'badge-ready' :
+                                  (${doc.status.name() == 'FAILED'} ? 'badge-failed' : 'badge-processing')"
+                              th:text="${doc.status.label()}">Ready</span>
+                    </td>
+                    <td class="numeric" th:text="${doc.sizeLabel()}">1.2 MB</td>
+                    <td class="numeric" th:text="${doc.chunkCount}">0</td>
+                    <td th:text="${@dates.day(doc.createdAt)}">1 Jan 2026</td>
+                    <td class="numeric">
+                        <a class="text-small" th:href="@{/documents/{id}(id=${doc.id})}">Open</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

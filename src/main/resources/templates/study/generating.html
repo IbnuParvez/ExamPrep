@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Generating your study package — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="gen-panel" data-study-status
+         th:attr="data-study-id=${pack.id},data-status=${status.status.name()},
+                  data-status-url=@{/api/study/{id}/status(id=${pack.id})}">
+        <p class="eyebrow" th:text="${pack.title}">Study package</p>
+        <h1 id="gen-title" th:text="${status.failed()} ? 'Generation did not finish' : 'Building your study package'">
+            Building your study package</h1>
+        <p id="gen-message" th:text="${status.progressMessage != null}
+            ? ${status.progressMessage} : 'Preparing the request'">Preparing the request</p>
+
+        <div class="progress" th:unless="${status.failed()}">
+            <div class="progress-bar" id="gen-bar" th:style="|width:${status.progressPercent}%|"></div>
+        </div>
+        <div class="progress-label" th:unless="${status.failed()}" style="justify-content:center">
+            <span id="gen-percent" th:text="|${status.progressPercent}%|">10%</span>
+        </div>
+
+        <div class="alert alert-danger" id="gen-error" th:if="${status.failed()}" th:text="${status.errorMessage}">
+            Reason
+        </div>
+        <div class="alert alert-danger" id="gen-error-live" hidden></div>
+
+        <p class="text-small text-muted" th:unless="${status.failed()}">
+            You can leave this page. Generation continues on the server and the package will be waiting on your
+            dashboard.
+        </p>
+
+        <div class="button-row" style="justify-content:center;margin-top:1.5rem">
+            <a class="button button-secondary" th:href="@{/study/{id}(id=${pack.id})}">Refresh status</a>
+            <a class="button button-ghost" th:href="@{/dashboard}">Back to dashboard</a>
+        </div>
+
+        <form th:action="@{/study/{id}/delete(id=${pack.id})}" method="post"
+              th:if="${status.failed()}" style="margin-top:1rem"
+              data-confirm="Delete this failed study package?">
+            <button class="button button-danger button-small" type="submit">Delete package</button>
+        </form>
+    </div>
+
+    <script th:src="@{/js/study-status.js}" defer></script>
+</main>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|Practice questions — ${pack.title}|">Practice questions — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <div class="toolbar" style="margin-bottom:0.4rem">
+            <div>
+                <p class="eyebrow">Practice</p>
+                <h1>Practice questions</h1>
+            </div>
+            <a class="button button-secondary button-small" th:href="@{/study/{id}(id=${pack.id})}">
+                Back to package
+            </a>
+        </div>
+        <p class="lede">Attempt each question first, then reveal the answer and explanation. Answers are fetched
+            from the server only when you ask for them.</p>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(pack.practiceQuestions)}">
+        <h3>No practice questions</h3>
+        <p>Generate the package again to produce practice questions from this document.</p>
+    </div>
+
+    <div class="content-grid" th:unless="${#lists.isEmpty(pack.practiceQuestions)}">
+        <section>
+            <article class="question-block" th:each="question : ${pack.practiceQuestions}"
+                     th:attr="data-answer-url=@{/api/study/{packId}/practice/{questionId}/answer(packId=${pack.id},questionId=${question.id})}">
+                <div class="toolbar" style="margin-bottom:0.6rem">
+                    <span class="badge badge-neutral"
+                          th:text="|${question.type.label()} · ${question.difficulty}|">Multiple choice · MEDIUM</span>
+                    <span class="source" th:if="${question.sourceRef != null}" th:text="${question.sourceRef}">Page 4</span>
+                </div>
+                <p class="question-text" th:text="${question.question}">Question</p>
+
+                <ul class="option-list" th:if="${question.type.name() == 'MULTIPLE_CHOICE'}">
+                    <li th:each="option, stats : ${question.options}">
+                        <span th:text="${#strings.substring('ABCDEF', stats.index, stats.index + 1)} + '. '"></span>
+                        <span th:text="${option}">Option</span>
+                    </li>
+                </ul>
+                <p class="text-small text-muted" th:if="${question.type.name() == 'TRUE_FALSE'}">
+                    Decide whether the statement is true or false.
+                </p>
+                <p class="text-small text-muted" th:if="${question.type.name() == 'SHORT_ANSWER'}">
+                    Write your answer, then compare it with the suggested answer.
+                </p>
+
+                <div class="button-row">
+                    <button class="button button-secondary button-small reveal-answer" type="button"
+                            th:attr="data-loading-text='Loading answer'">Reveal answer</button>
+                </div>
+                <div class="answer-slot"></div>
+            </article>
+        </section>
+
+        <aside class="side-panel">
+            <h3>How to practise</h3>
+            <ul>
+                <li>Answer before revealing: recall is what the exam tests.</li>
+                <li>Use the source reference to check the exact wording.</li>
+                <li>Move to the mock exam when most answers feel familiar.</li>
+            </ul>
+            <a class="button" th:href="@{/study/{id}/exam(id=${pack.id})}">Start mock exam</a>
+        </aside>
+    </div>
+
+    <script th:src="@{/js/practice.js}" defer></script>
+</main>
+</body>
+</html>

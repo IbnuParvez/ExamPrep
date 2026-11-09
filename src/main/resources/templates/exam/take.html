@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|Examination — ${exam.studyPackTitle}|">Examination — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="exam-bar">
+        <div>
+            <strong th:text="${exam.studyPackTitle}">Study package</strong>
+            <div class="text-small text-muted"
+                 th:text="${#lists.size(exam.questions) + ' questions · answers are marked after submission'}">
+                10 questions
+            </div>
+        </div>
+        <div class="timer" id="exam-timer" th:attr="data-remaining=${remainingSeconds}"
+             aria-live="polite">--:--</div>
+    </div>
+
+    <form id="exam-form" th:action="@{/exam/{id}/submit(id=${exam.attemptId})}" method="post"
+          th:attr="data-remaining=${remainingSeconds}">
+        <input type="hidden" name="timeTaken" id="time-taken" value="0">
+        <div class="exam-layout">
+            <div id="exam-questions">
+                <fieldset class="exam-question" th:each="question : ${exam.questions}"
+                          th:id="|question-${question.position}|">
+                    <legend>
+                        <span class="q-number" th:text="|${question.position}.|">1.</span>
+                        <span th:text="${question.question}">Question text</span>
+                    </legend>
+
+                    <div class="exam-options" th:if="${question.type.name() == 'MULTIPLE_CHOICE'}">
+                        <label class="exam-option" th:each="option, stat : ${question.options}">
+                            <input type="radio" th:name="|q_${question.questionId}|" th:value="${stat.index}">
+                            <span th:text="${option}">Option</span>
+                        </label>
+                    </div>
+
+                    <div class="exam-options" th:if="${question.type.name() == 'TRUE_FALSE'}">
+                        <label class="exam-option">
+                            <input type="radio" th:name="|q_${question.questionId}|" value="true">
+                            <span>True</span>
+                        </label>
+                        <label class="exam-option">
+                            <input type="radio" th:name="|q_${question.questionId}|" value="false">
+                            <span>False</span>
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+
+            <aside class="exam-nav">
+                <div class="side-panel">
+                    <h3>Question navigator</h3>
+                    <div class="exam-legend">
+                        <span><span class="legend-swatch filled"></span>Answered</span>
+                        <span><span class="legend-swatch"></span>Unanswered</span>
+                    </div>
+                    <div class="question-grid">
+                        <button type="button" class="question-chip" th:each="question : ${exam.questions}"
+                                th:attr="data-target=|question-${question.position}|"
+                                th:text="${question.position}">1</button>
+                    </div>
+                    <p class="text-small text-muted">
+                        <span id="answered-count">0</span> of
+                        <span th:text="${#lists.size(exam.questions)}">10</span> answered
+                    </p>
+                    <button class="button" type="submit" id="submit-exam">Submit examination</button>
+                    <p class="text-small text-muted" style="margin-top:0.7rem">
+                        You cannot change answers after submitting.
+                    </p>
+                </div>
+            </aside>
+        </div>
+    </form>
+
+    <script th:src="@{/js/exam.js}" defer></script>
+</main>
+</body>
+</html>

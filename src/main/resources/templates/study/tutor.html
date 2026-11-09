@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|AI tutor — ${pack.title}|">AI tutor — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <div class="toolbar" style="margin-bottom:0.4rem">
+            <div>
+                <p class="eyebrow">Tutor</p>
+                <h1>Ask about this material</h1>
+            </div>
+            <a class="button button-secondary button-small" th:href="@{/study/{id}(id=${pack.id})}">
+                Back to package
+            </a>
+        </div>
+        <p class="lede" th:text="${pack.title}">Study package</p>
+    </div>
+
+    <div class="tutor-layout">
+        <div class="chat" data-tutor th:attr="data-tutor-url=@{/api/study/{id}/tutor(id=${pack.id})}">
+            <div class="chat-log" id="chat-log">
+                <div class="empty compact" id="chat-empty" th:if="${#lists.isEmpty(messages)}">
+                    <h3>Ask your first question</h3>
+                    <p>Answers are grounded in the sections of your document most relevant to the question. If
+                        the material does not cover something, the tutor will say so.</p>
+                </div>
+                <div class="message" th:each="message : ${messages}"
+                     th:classappend="${message.role == 'user'} ? 'user' : ''">
+                    <div class="message-role" th:text="${message.role == 'user'} ? 'You' : 'ExamPrep tutor'">Tutor</div>
+                    <div class="message-body" th:text="${message.content}">Message</div>
+                    <div class="message-sources" th:if="${!#lists.isEmpty(message.sources)}">
+                        <span class="source" th:each="source : ${message.sources}" th:text="${source}">Page 3</span>
+                    </div>
+                </div>
+            </div>
+            <div class="typing" id="tutor-typing" hidden>Searching your document and drafting an answer…</div>
+            <form class="chat-form" id="tutor-form">
+                <label class="sr-only" for="tutor-message">Your question</label>
+                <textarea id="tutor-message" name="message" maxlength="2000" required
+                          placeholder="Explain the difference between the two main concepts in this topic."></textarea>
+                <div class="chat-actions">
+                    <span class="text-small text-muted">Answers are generated; verify important details.</span>
+                    <button class="button" type="submit" id="tutor-submit">Ask tutor</button>
+                </div>
+            </form>
+        </div>
+
+        <aside>
+            <div class="side-panel">
+                <h3>Useful prompts</h3>
+                <div class="prompt-chips">
+                    <button type="button" class="prompt-chip">Explain this topic in simple language.</button>
+                    <button type="button" class="prompt-chip">What is the difference between the key concepts?</button>
+                    <button type="button" class="prompt-chip">Give me an example based on these notes.</button>
+                    <button type="button" class="prompt-chip">Explain the process step by step.</button>
+                    <button type="button" class="prompt-chip">Ask me a practice question on this topic.</button>
+                </div>
+                <h3 style="margin-top:1.3rem">How answers work</h3>
+                <ul>
+                    <li>Relevant chunks of your document are retrieved for each question.</li>
+                    <li>Answers cite the page, slide or section they rely on when possible.</li>
+                    <li>If the document is insufficient, the tutor says so instead of inventing content.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <script th:src="@{/js/tutor.js}" defer></script>
+</main>
+</body>
+</html>

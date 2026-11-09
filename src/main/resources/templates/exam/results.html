@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Examination results — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Results</p>
+        <h1>Examination results</h1>
+        <p class="lede" th:text="${result.studyPackTitle}">Study package</p>
+    </div>
+
+    <div class="result-head">
+        <div class="score-dial">
+            <div>
+                <strong th:text="|${result.percentage}%|">0%</strong>
+                <span th:text="|${result.score} of ${result.totalQuestions}|">0 of 0</span>
+            </div>
+        </div>
+        <div>
+            <h2 th:text="|${result.score} / ${result.totalQuestions} correct|">0 / 0 correct</h2>
+            <div class="result-meta">
+                <div><span>Time taken</span><strong th:text="${@dates.minutes(result.timeTakenSeconds)}">0m</strong></div>
+                <div><span>Submitted</span><strong th:text="${@dates.dayTime(result.submittedAt)}">1 Jan</strong></div>
+                <div><span>Marking</span><strong>Automatic</strong></div>
+            </div>
+            <div class="button-row" style="margin-top:1.2rem">
+                <a class="button button-secondary" th:href="@{/study/{id}(id=${result.studyPackId})}">
+                    Back to study package
+                </a>
+                <form th:action="@{/study/{id}/exam/start(id=${result.studyPackId})}" method="post">
+                    <button class="button" type="submit">Sit another mock exam</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-warning" th:if="${!#lists.isEmpty(result.revisionAreas)}">
+        <span class="alert-title">Focus your revision here</span>
+        <span class="source" th:each="area : ${result.revisionAreas}" th:text="${area}">Page 4</span>
+    </div>
+
+    <section class="section">
+        <div class="section-head">
+            <h2>Question review</h2>
+        </div>
+
+        <article class="result-item" th:each="item : ${result.items}"
+                 th:classappend="${item.correct} ? '' : 'incorrect'">
+            <div class="q-line">
+                <span th:text="|${item.position}. |">1.</span>
+                <span th:text="${item.question}">Question</span>
+                <span class="badge" style="margin-left:0.5rem"
+                      th:classappend="${item.correct} ? 'badge-ready' : 'badge-failed'"
+                      th:text="${item.correct} ? 'Correct' : 'Incorrect'">Correct</span>
+            </div>
+            <div class="answer-compare">
+                <div>
+                    <span class="label">Your answer</span>
+                    <span th:text="${item.studentAnswer}">Answer</span>
+                </div>
+                <div>
+                    <span class="label">Correct answer</span>
+                    <span th:text="${item.correctAnswer}">Answer</span>
+                </div>
+            </div>
+            <div class="explanation" th:if="${item.explanation != null and !item.explanation.isBlank()}">
+                <p th:text="${item.explanation}">Explanation</p>
+            </div>
+            <div style="margin-top:0.5rem" th:if="${item.sourceRef != null}">
+                <span class="source" th:text="${item.sourceRef}">Page 4</span>
+            </div>
+        </article>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|Flashcards — ${pack.title}|">Flashcards — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <div class="toolbar" style="margin-bottom:0.4rem">
+            <div>
+                <p class="eyebrow">Revision</p>
+                <h1>Flashcards</h1>
+            </div>
+            <a class="button button-secondary button-small" th:href="@{/study/{id}(id=${pack.id})}">
+                Back to package
+            </a>
+        </div>
+        <p class="lede" th:text="${pack.title}">Study package</p>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(pack.flashcards)}">
+        <h3>No flashcards in this package</h3>
+        <p>Generate the package again, or try a document with more content.</p>
+        <a class="button button-secondary" th:href="@{/study/{id}(id=${pack.id})}">Back to package</a>
+    </div>
+
+    <div class="flashcard-stage" th:unless="${#lists.isEmpty(pack.flashcards)}"
+         data-flashcards
+         th:attr="data-review-url=@{/api/study/{id}/flashcards/review(id=${pack.id})},
+                  data-total=${#lists.size(pack.flashcards)}">
+        <div id="flashcard-source-data" hidden>
+            <div th:each="card : ${pack.flashcards}"
+                 th:attr="data-front=${card.front},data-back=${card.back},data-source=${card.sourceRef}"></div>
+        </div>
+
+        <div class="flashcard" id="flashcard">
+            <div class="flashcard-label" id="card-label">Question</div>
+            <div class="flashcard-text" id="card-text">Loading flashcards…</div>
+            <div class="text-small text-muted" id="card-source" style="margin-top:1rem"></div>
+        </div>
+
+        <div class="flashcard-controls">
+            <button class="button button-secondary button-small" type="button" id="prev-card">Previous</button>
+            <span class="flashcard-counter" id="card-counter">1 / 1</span>
+            <div class="flashcard-actions">
+                <button class="button button-small" type="button" id="reveal-card">Reveal answer</button>
+                <button class="button button-secondary button-small" type="button" id="next-card">Next</button>
+            </div>
+        </div>
+
+        <p class="text-small text-muted" style="margin-top:1.2rem">
+            Use the arrow keys to move between cards and Space to reveal the answer.
+        </p>
+    </div>
+
+    <div class="card review-summary" id="review-summary" hidden>
+        <h2>Review complete</h2>
+        <p id="review-summary-text">You reviewed 0 of 0 cards.</p>
+        <div class="button-row">
+            <a class="button" th:href="@{/study/{id}/practice(id=${pack.id})}">Try practice questions</a>
+            <a class="button button-secondary" th:href="@{/study/{id}/exam(id=${pack.id})}">Start a mock exam</a>
+        </div>
+    </div>
+
+    <script th:src="@{/js/flashcards.js}" defer></script>
+</main>
+</body>
+</html>

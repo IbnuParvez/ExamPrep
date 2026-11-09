@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|${document.originalFilename} — ExamPrep|">Document — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Document</p>
+        <h1 th:text="${document.originalFilename}">notes.pdf</h1>
+        <p class="lede" th:text="|Added ${@dates.day(document.createdAt)}|">Added 1 Jan 2026</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${uploaded}">
+        <span class="alert-title">Upload received</span>
+        Extraction runs in the background. This page updates automatically.
+    </div>
+    <div class="alert alert-success" th:if="${notice != null}" th:text="${notice}">Done.</div>
+
+    <div class="content-grid">
+        <section>
+            <div class="panel" data-document-status
+                 th:attr="data-document-id=${document.id},data-status=${document.status.name()},
+                          data-status-url=@{/api/documents/{id}/status(id=${document.id})}">
+                <div class="panel-header">
+                    <h2>Extraction status</h2>
+                    <span class="badge"
+                          id="document-status-badge"
+                          th:classappend="${document.status.name() == 'READY'} ? 'badge-ready' :
+                              (${document.status.name() == 'FAILED'} ? 'badge-failed' : 'badge-processing')"
+                          th:text="${document.status.label()}">Ready</span>
+                </div>
+                <div class="panel-body">
+                    <div id="status-in-progress" th:if="${document.inProgress()}">
+                        <p>We are reading this document and dividing the text into citable chunks. This usually
+                            takes a few seconds.</p>
+                        <div class="progress">
+                            <div class="progress-bar" style="width:35%"></div>
+                        </div>
+                    </div>
+
+                    <div id="status-ready" th:if="${document.ready()}">
+                        <p>Text extraction is complete. The document has
+                            <strong th:text="${document.chunkCount}">0</strong> citable chunks<span
+                                th:if="${document.pageCount != null and document.pageCount > 0}"
+                                th:text="| across ${document.pageCount} pages|"></span>.</p>
+                        <div class="button-row">
+                            <a class="button" th:href="@{/documents/{id}/study(id=${document.id})}">
+                                Generate a study package
+                            </a>
+                        </div>
+                    </div>
+
+                    <div id="status-failed" th:if="${document.failed()}">
+                        <div class="alert alert-danger" style="margin-bottom:1rem">
+                            <span class="alert-title">Extraction failed</span>
+                            <span id="document-error" th:text="${document.errorMessage}">Reason</span>
+                        </div>
+                        <form th:action="@{/documents/{id}/retry(id=${document.id})}" method="post">
+                            <button class="button button-secondary" type="submit">Retry extraction</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top:1.4rem">
+                <div class="panel-header">
+                    <h2>Study packages from this document</h2>
+                    <a class="text-small" th:href="@{/documents/{id}/study(id=${document.id})}"
+                       th:if="${document.ready()}">New package</a>
+                </div>
+                <div class="panel-body">
+                    <div class="empty compact" th:if="${#lists.isEmpty(studyPacks)}">
+                        <p style="margin-bottom:0">No study package has been generated from this document yet.</p>
+                    </div>
+                    <table class="data" th:unless="${#lists.isEmpty(studyPacks)}">
+                        <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Status</th>
+                            <th class="numeric">Cards</th>
+                            <th class="numeric">Questions</th>
+                            <th>Created</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="pack : ${studyPacks}">
+                            <td class="cell-title">
+                                <a th:href="@{/study/{id}(id=${pack.id})}" th:text="${pack.title}">Package</a>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${pack.status.name() == 'READY'} ? 'badge-ready' :
+                                          (${pack.status.name() == 'FAILED'} ? 'badge-failed' : 'badge-processing')"
+                                      th:text="${pack.status.label()}">Ready</span>
+                            </td>
+                            <td class="numeric" th:text="${pack.flashcardCount}">0</td>
+                            <td class="numeric" th:text="${pack.questionCount}">0</td>
+                            <td th:text="${@dates.day(pack.createdAt)}">1 Jan 2026</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <aside>
+            <div class="side-panel">
+                <h3>Document details</h3>
+                <ul class="meta-list">
+                    <li><span class="key">Type</span><span class="value mono" th:text="${document.typeLabel()}" th:title="${document.contentType}">PDF</span></li>
+                    <li><span class="key">Chunks</span><span class="value" th:text="${document.chunkCount}">0</span></li>
+                    <li><span class="key">Pages</span>
+                        <span class="value"
+                              th:text="${document.pageCount != null and document.pageCount > 0 ? document.pageCount : '—'}">—</span></li>
+                    <li><span class="key">Added</span><span class="value" th:text="${@dates.day(document.createdAt)}">1 Jan</span></li>
+                </ul>
+
+                <h3 style="margin-top:1.5rem">Delete document</h3>
+                <p class="text-small text-muted">This removes the stored file, its extracted text and all study
+                    packages generated from it.</p>
+                <form th:action="@{/documents/{id}/delete(id=${document.id})}" method="post"
+                      data-confirm="Delete this document and all study packages built from it?">
+                    <button class="button button-danger button-small" type="submit">Delete document</button>
+                </form>
+            </div>
+        </aside>
+    </div>
+
+    <script th:src="@{/js/document-status.js}" defer></script>
+</main>
+</body>
+</html>

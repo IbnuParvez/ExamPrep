@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Upload a document — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">New material</p>
+        <h1>Upload a document</h1>
+        <p class="lede">ExamPrep reads the text, keeps page and slide references, and prepares it for study
+            package generation.</p>
+    </div>
+
+    <div class="content-grid">
+        <section>
+            <div class="alert alert-danger" id="upload-error" hidden>
+                <span class="alert-title">Upload failed</span>
+                <span id="upload-error-message"></span>
+            </div>
+
+            <form id="upload-form" th:action="@{/documents}" method="post" enctype="multipart/form-data"
+                  th:attr="data-max-mb=${maxSizeMb}">
+                <input type="file" id="file-input" name="file" class="sr-only"
+                       accept=".pdf,.docx,.doc,.pptx,.ppt,.txt,.md,.rtf,.odt,.odp">
+
+                <div class="dropzone" id="dropzone" tabindex="0" role="button"
+                     aria-label="Choose a document or drop it here">
+                    <div class="dropzone-icon" aria-hidden="true">↑</div>
+                    <h2>Drop a file here</h2>
+                    <p class="text-muted">or choose a document from your computer</p>
+                    <button class="button button-secondary" type="button" id="browse-button">Choose file</button>
+                </div>
+
+                <div class="file-meta" id="file-meta" hidden>
+                    <div>
+                        <div class="file-name" id="file-name"></div>
+                        <div class="text-small text-muted" id="file-size"></div>
+                    </div>
+                    <button class="link-button" type="button" id="clear-file">Remove</button>
+                </div>
+
+                <div id="progress-wrap" hidden>
+                    <div class="progress">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="progress-label">
+                        <span id="progress-status">Uploading</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="button" type="submit" id="upload-button" disabled>Upload and extract</button>
+                    <a class="button button-ghost" th:href="@{/documents}">Cancel</a>
+                </div>
+            </form>
+
+            <div class="alert alert-warning" style="margin-top:1.5rem">
+                <span class="alert-title">About scanned PDFs</span>
+                If a PDF contains only scanned images, there is no text to extract and ExamPrep will say so.
+                OCR is not part of this release, so upload a text-based PDF instead.
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <h3>Accepted formats</h3>
+            <ul>
+                <li th:each="format : ${formats}" th:text="${format}">PDF</li>
+            </ul>
+            <h3 style="margin-top:1.2rem">Limits</h3>
+            <ul>
+                <li>Maximum size: <strong th:text="|${maxSizeMb} MB|">25 MB</strong></li>
+                <li>One document per upload</li>
+                <li>Files must be readable text, not images</li>
+            </ul>
+            <p class="text-small text-muted" style="margin-top:1rem">Your file is stored privately. Its name is
+                preserved as metadata, but it is never served from a public URL.</p>
+        </aside>
+    </div>
+
+    <script th:src="@{/js/upload.js}" defer></script>
+</main>
+</body>
+</html>

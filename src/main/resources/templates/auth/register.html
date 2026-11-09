@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Create your account — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="auth-wrap">
+        <div class="auth-head">
+            <h1>Create your account</h1>
+            <p>Upload course material and build your first study package.</p>
+        </div>
+
+        <div class="card">
+            <form class="form" th:action="@{/register}" th:object="${form}" method="post" style="max-width:none">
+                <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                    <span class="alert-title">Please check the form</span>
+                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Error</p>
+                </div>
+                <div class="field">
+                    <label for="fullName">Full name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" autocomplete="name"
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'input-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </div>
+                <div class="field">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" th:field="*{email}" autocomplete="email"
+                           th:classappend="${#fields.hasErrors('email')} ? 'input-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" th:field="*{password}" autocomplete="new-password"
+                           th:classappend="${#fields.hasErrors('password')} ? 'input-invalid'">
+                    <p class="hint">At least 8 characters.</p>
+                    <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+                </div>
+                <div class="field">
+                    <label for="passwordConfirm">Confirm password</label>
+                    <input type="password" id="passwordConfirm" th:field="*{passwordConfirm}" autocomplete="new-password"
+                           th:classappend="${#fields.hasErrors('passwordConfirm')} ? 'input-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('passwordConfirm')}"
+                          th:errors="*{passwordConfirm}"></span>
+                </div>
+                <div class="form-actions">
+                    <button class="button" type="submit">Create account</button>
+                </div>
+                <p class="hint">By creating an account you agree that uploaded document text is sent to Google's
+                    Gemini API to generate study material. See the <a th:href="@{/privacy}">privacy notice</a>.</p>
+            </form>
+        </div>
+
+        <p class="auth-alt">Already have an account? <a th:href="@{/login}">Sign in</a></p>
+    </div>
+</main>
+</body>
+</html>

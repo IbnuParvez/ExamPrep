@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|${pack.title} — ExamPrep|">Study package — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="pack-head">
+        <div class="pack-title-row">
+            <div>
+                <p class="eyebrow">Study package</p>
+                <h1 th:text="${pack.title}">Study package</h1>
+                <div class="pack-meta">
+                    <span th:text="${pack.documentFilename}">notes.pdf</span>
+                    <span th:if="${pack.academicLevel != null}" th:text="${pack.academicLevel}">Undergraduate</span>
+                    <span th:if="${pack.language != null}" th:text="${pack.language}">English</span>
+                    <span th:text="|Created ${@dates.day(pack.createdAt)}|">Created 1 Jan 2026</span>
+                </div>
+            </div>
+            <div class="button-row">
+                <a class="button button-secondary button-small" th:href="@{/documents/{id}(id=${pack.documentId})}">
+                    Source document
+                </a>
+                <form th:action="@{/study/{id}/delete(id=${pack.id})}" method="post"
+                      data-confirm="Delete this study package, its flashcards and examination history?">
+                    <button class="button button-danger button-small" type="submit">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <nav class="tabs" aria-label="Study package sections">
+        <a class="tab" th:classappend="${tab == 'overview'} ? 'is-active'"
+           th:href="@{/study/{id}(id=${pack.id},tab='overview')}">Overview</a>
+        <a class="tab" th:classappend="${tab == 'topics'} ? 'is-active'"
+           th:href="@{/study/{id}(id=${pack.id},tab='topics')}">
+            Topics (<span th:text="${#lists.size(pack.topics)}">0</span>)</a>
+        <a class="tab" th:classappend="${tab == 'notes'} ? 'is-active'"
+           th:href="@{/study/{id}(id=${pack.id},tab='notes')}">Revision notes</a>
+        <a class="tab" th:classappend="${tab == 'definitions'} ? 'is-active'"
+           th:href="@{/study/{id}(id=${pack.id},tab='definitions')}">Definitions</a>
+        <a class="tab" th:classappend="${tab == 'formulas'} ? 'is-active'"
+           th:href="@{/study/{id}(id=${pack.id},tab='formulas')}">Formulas</a>
+        <a class="tab" th:href="@{/study/{id}/flashcards(id=${pack.id})}">Flashcards</a>
+        <a class="tab" th:href="@{/study/{id}/practice(id=${pack.id})}">Practice</a>
+        <a class="tab" th:href="@{/study/{id}/exam(id=${pack.id})}">Mock exam</a>
+        <a class="tab" th:href="@{/study/{id}/tutor(id=${pack.id})}">Tutor</a>
+    </nav>
+
+    <div class="content-grid">
+        <section>
+            <div th:if="${tab == 'overview'}">
+                <div class="prose">
+                    <h2>Introduction</h2>
+                    <p th:text="${pack.introduction}">Introduction</p>
+
+                    <h2>Summary</h2>
+                    <p th:text="${pack.summary}">Summary</p>
+
+                    <h2>Learning objectives</h2>
+                    <ul>
+                        <li th:each="objective : ${pack.learningObjectives}" th:text="${objective}">Objective</li>
+                    </ul>
+
+                    <h2>Important areas to revise</h2>
+                    <ul>
+                        <li th:each="area : ${pack.keyAreasToRevise}" th:text="${area}">Area</li>
+                    </ul>
+                </div>
+                <div class="alert alert-warning" style="margin-top:2rem">
+                    <span class="alert-title">Educational assistance</span>
+                    This package was generated from your document. Check important details against your official
+                    course material before relying on them in an examination.
+                </div>
+            </div>
+
+            <div th:if="${tab == 'topics'}">
+                <div class="empty" th:if="${#lists.isEmpty(pack.topics)}">
+                    <h3>No topics were generated</h3>
+                    <p>The document may not contain enough structured content. Try a longer or clearer document.</p>
+                </div>
+                <article class="topic" th:each="topic : ${pack.topics}">
+                    <h3 th:text="${topic.name}">Topic</h3>
+                    <p th:text="${topic.explanation}">Explanation</p>
+                    <div class="concept-list" th:if="${!#lists.isEmpty(topic.keyConcepts)}">
+                        <span class="concept" th:each="concept : ${topic.keyConcepts}" th:text="${concept}">Concept</span>
+                    </div>
+                    <div style="margin-top:0.7rem" th:if="${!#lists.isEmpty(topic.sources)}">
+                        <span class="source" th:each="source : ${topic.sources}" th:text="${source}">Page 3</span>
+                    </div>
+                </article>
+            </div>
+
+            <div th:if="${tab == 'notes'}">
+                <div class="empty" th:if="${#lists.isEmpty(pack.revisionSections)}">
+                    <h3>No revision notes were generated</h3>
+                    <p>Try generating the package again, or upload a document with more explanatory text.</p>
+                </div>
+                <div class="notes prose">
+                    <section th:each="section : ${pack.revisionSections}">
+                        <h3 th:text="${section.heading}">Heading</h3>
+                        <p th:text="${section.body}" style="white-space:pre-line">Body</p>
+                        <div th:if="${!#lists.isEmpty(section.sources)}">
+                            <span class="source" th:each="source : ${section.sources}" th:text="${source}">Page 3</span>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div th:if="${tab == 'definitions'}">
+                <div class="empty" th:if="${#lists.isEmpty(pack.definitions)}">
+                    <h3>No definitions were generated</h3>
+                    <p>This document may not contain explicit terminology to define.</p>
+                </div>
+                <dl class="definition-list" th:unless="${#lists.isEmpty(pack.definitions)}">
+                    <th:block th:each="definition : ${pack.definitions}">
+                        <dt th:text="${definition.term}">Term</dt>
+                        <dd>
+                            <span th:text="${definition.definition}">Definition</span>
+                            <span class="source" style="margin-left:0.4rem" th:if="${definition.source != null}"
+                                  th:text="${definition.source}">Page 3</span>
+                        </dd>
+                    </th:block>
+                </dl>
+            </div>
+
+            <div th:if="${tab == 'formulas'}">
+                <div class="empty" th:if="${#lists.isEmpty(pack.formulas)}">
+                    <h3>No formulas in this material</h3>
+                    <p>ExamPrep only lists formulas that appear in the uploaded document.</p>
+                </div>
+                <article class="formula" th:each="formula : ${pack.formulas}">
+                    <div class="formula-name" th:text="${formula.name}">Formula name</div>
+                    <div class="formula-expression" th:text="${formula.expression}">F = ma</div>
+                    <p th:text="${formula.explanation}">Explanation</p>
+                    <span class="source" th:if="${formula.source != null}" th:text="${formula.source}">Page 3</span>
+                </article>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <h3>In this package</h3>
+            <ul class="meta-list">
+                <li><span class="key">Flashcards</span>
+                    <span class="value" th:text="${#lists.size(pack.flashcards)}">0</span></li>
+                <li><span class="key">Practice questions</span>
+                    <span class="value" th:text="${#lists.size(pack.practiceQuestions)}">0</span></li>
+                <li><span class="key">Exam questions</span>
+                    <span class="value" th:text="${pack.examQuestionCount}">0</span></li>
+                <li><span class="key">Exam duration</span>
+                    <span class="value" th:text="|${pack.examDurationMinutes} min|">15 min</span></li>
+            </ul>
+
+            <a class="button" th:href="@{/study/{id}/exam(id=${pack.id})}">Start mock exam</a>
+            <a class="button button-secondary" th:href="@{/study/{id}/flashcards(id=${pack.id})}">Review flashcards</a>
+            <a class="button button-secondary" th:href="@{/study/{id}/practice(id=${pack.id})}">Practice questions</a>
+            <a class="button button-secondary" th:href="@{/study/{id}/tutor(id=${pack.id})}">Ask the tutor</a>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

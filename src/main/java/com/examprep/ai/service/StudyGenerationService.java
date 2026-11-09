@@ -1,0 +1,160 @@
+package com.examprep.ai.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import com.examprep.ai.dto.GeneratedStudyPackage;
+import com.examprep.ai.exception.AiResponseException;
+import com.examprep.api.DocumentApplicationService;
+import com.examprep.api.dto.DocumentContext;
+import com.examprep.api.dto.StudyPackDto;
+import com.examprep.api.dto.StudyPreferences;
+import com.examprep.api.model.Difficulty;
+import com.examprep.api.model.QuestionType;
+import com.examprep.common.AppException;
+import com.examprep.config.AsyncConfig;
+import com.examprep.study.domain.FlashcardEntity;
+import com.examprep.study.domain.QuestionEntity;
+import com.examprep.study.domain.StudyPackageContent;
+import com.examprep.study.domain.StudyPack;
+import com.examprep.study.repository.FlashcardRepository;
+import com.examprep.study.repository.QuestionRepository;
+import com.examprep.study.repository.StudyPackRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ * Runs study generation outside the browser request. Progress is persisted so polling clients see
+ * honest status, and failures are stored with a safe explanation instead of a fake result.
+ */
+@Service
+public class StudyGenerationService {
+
+    private static final Logger log = LoggerFactory.getLogger(StudyGenerationService.class);
+
+    private final StudyPackRepository studyPackRepository;
+    private final FlashcardRepository flashcardRepository;
+    private final QuestionRepository questionRepository;
+    private final DocumentApplicationService documentService;
+    private final StudyPackageGenerator generator;
+    private final ObjectMapper objectMapper;
+
+    public StudyGenerationService(StudyPackRepository studyPackRepository, FlashcardRepository flashcardRepository,
+                                  QuestionRepository questionRepository, DocumentApplicationService documentService,
+                                  StudyPackageGenerator generator, ObjectMapper objectMapper) {
+        this.studyPackRepository = studyPackRepository;
+        this.flashcardRepository = flashcardRepository;
+        this.questionRepository = questionRepository;
+        this.documentService = documentService;
+        this.generator = generator;
+        this.objectMapper = objectMapper;
+    }
+
+    @Async(AsyncConfig.STUDY_EXECUTOR)
+    public void generate(UUID studyPackId) {
+        StudyPack pack = studyPackRepository.findById(studyPackId).orElse(null);
+        if (pack == null) {
+            return;
+        }
+        try {
+            pack.markProcessing("Reading extracted document text", 10);
+            studyPackRepository.save(pack);
+
+            DocumentContext context = documentService.getContext(pack.getDocumentId(), pack.getOwnerId());
+            StudyPreferences preferences = new StudyPreferences(
+                    pack.getLanguage(), pack.getAcademicLevel(), pack.getExamDate(),
+                    defaultValue(pack.getQuestionTarget(), 12),
+                    defaultValue(pack.getFlashcardTarget(), 16),
+                    defaultValue(pack.getExamQuestionCount(), 10),
+                    defaultValue(pack.getExamDurationMinutes(), 15));
+
+            GeneratedStudyPackage generated = generator.generate(context, preferences, (message, percent) -> {
+                pack.markProcessing(message, percent);
+                studyPackRepository.save(pack);
+            });
+
+            persistQuestionsAndFlashcards(pack, generated);
+            StudyPackageContent content = new StudyPackageContent(
+                    generated.topics().stream()
+                            .map(topic -> new StudyPackDto.Topic(topic.name(), topic.explanation(),
+                                    topic.keyConcepts(), topic.sources()))
+                            .toList(),
+                    generated.revisionSections().stream()
+                            .map(section -> new StudyPackDto.RevisionSection(section.heading(), section.body(),
+                                    section.sources()))
+                            .toList(),
+                    generated.definitions().stream()
+                            .map(definition -> new StudyPackDto.Definition(definition.term(),
+                                    definition.definition(), definition.source()))
+                            .toList(),
+                    generated.formulas().stream()
+                            .map(formula -> new StudyPackDto.Formula(formula.name(), formula.expression(),
+                                    formula.explanation(), formula.source()))
+                            .toList());
+            Map<String, Object> contentMap = objectMapper.convertValue(content, new TypeReference<>() {
+            });
+            pack.applyGeneratedContent(generated.title(), generated.introduction(), generated.summary(),
+                    generated.learningObjectives(), generated.keyAreasToRevise(), contentMap);
+            pack.markReady();
+            studyPackRepository.save(pack);
+            log.info("Study package {} is ready", studyPackId);
+        } catch (AppException exception) {
+            log.warn("Study generation failed for package {}: {}", studyPackId, exception.getMessage());
+            fail(pack, exception.getMessage());
+        } catch (Exception exception) {
+            log.warn("Study generation failed unexpectedly for package {}", studyPackId, exception);
+            fail(pack, "We could not generate this study package. Please try again.");
+        }
+    }
+
+    private void persistQuestionsAndFlashcards(StudyPack pack, GeneratedStudyPackage generated) {
+        flashcardRepository.deleteAllForPack(pack.getId());
+        questionRepository.deleteAllForPack(pack.getId());
+
+        List<FlashcardEntity> flashcards = new ArrayList<>();
+        int flashcardOrdinal = 1;
+        for (GeneratedStudyPackage.Flashcard flashcard : generated.flashcards()) {
+            flashcards.add(FlashcardEntity.of(pack.getId(), flashcardOrdinal++, flashcard.front(),
+                    flashcard.back(), flashcard.source()));
+        }
+        if (!flashcards.isEmpty()) {
+            flashcardRepository.saveAll(flashcards);
+        }
+
+        List<QuestionEntity> questions = new ArrayList<>();
+        int questionOrdinal = 1;
+        for (GeneratedStudyPackage.Question question : generated.questions()) {
+            QuestionType type = QuestionType.valueOf(question.type());
+            Difficulty difficulty = Difficulty.valueOf(question.difficulty());
+            questions.add(QuestionEntity.of(pack.getId(), questionOrdinal++, type, question.question(),
+                    question.options(), question.correctOptionIndex(), question.correctAnswer(),
+                    question.suggestedAnswer(), question.explanation(), difficulty, question.source()));
+        }
+        questionRepository.saveAll(questions);
+    }
+
+    private void fail(StudyPack pack, String message) {
+        // A deleted package (for example a deleted document) must not be resurrected.
+        if (!studyPackRepository.existsById(pack.getId())) {
+            return;
+        }
+        pack.markFailed(message);
+        studyPackRepository.save(pack);
+    }
+
+    private int defaultValue(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    /** Used by tests to assert that an unusable response fails loudly. */
+    static AiResponseException invalidResponse() {
+        return new AiResponseException("Gemini returned unusable study material.");
+    }
+}

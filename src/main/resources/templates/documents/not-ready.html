@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Document not ready — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="card" style="max-width:680px;margin:2rem auto">
+        <p class="eyebrow">Not ready</p>
+        <h1>This document is not ready for study generation</h1>
+        <p th:text="${document.failed()}
+            ? 'Extraction failed, so there is no text to study yet.'
+            : 'Text extraction has not finished yet.'">Extraction is still running.</p>
+
+        <div class="alert alert-danger" th:if="${document.failed()}">
+            <span class="alert-title">What happened</span>
+            <span th:text="${document.errorMessage}">Reason</span>
+        </div>
+
+        <div class="button-row">
+            <a class="button" th:href="@{/documents/{id}(id=${document.id})}">View document status</a>
+            <a class="button button-secondary" th:href="@{/documents}">Back to documents</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

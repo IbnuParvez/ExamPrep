@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title th:text="|Mock examination — ${pack.title}|">Mock examination — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Mock examination</p>
+        <h1>Examination conditions</h1>
+        <p class="lede" th:text="${pack.title}">Study package</p>
+    </div>
+
+    <div class="content-grid">
+        <section>
+            <div class="alert alert-warning" th:unless="${available}">
+                <span class="alert-title">Not enough exam questions yet</span>
+                A mock examination needs at least four multiple-choice or true/false questions. This package has
+                too few, so practice with the question bank or generate the package again.
+            </div>
+
+            <div class="card">
+                <h2>Before you begin</h2>
+                <ul>
+                    <li>The examination has <strong th:text="${pack.examQuestionCount}">10</strong> questions.</li>
+                    <li>You have <strong th:text="|${pack.examDurationMinutes} minutes|">15 minutes</strong>. The
+                        countdown starts when you begin.</li>
+                    <li>Questions are multiple choice or true/false and are marked automatically.</li>
+                    <li>Correct answers and explanations stay on the server until you submit.</li>
+                    <li>You can move between questions before submitting. Submitting is final.</li>
+                    <li>If the timer reaches zero, the examination is submitted with the answers selected so far.</li>
+                </ul>
+
+                <form th:action="@{/study/{id}/exam/start(id=${pack.id})}" method="post" style="margin-top:1.2rem">
+                    <button class="button" type="submit" th:disabled="${!available}">Start examination</button>
+                    <a class="button button-ghost" th:href="@{/study/{id}(id=${pack.id})}">Back to package</a>
+                </form>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <h3>Exam settings</h3>
+            <ul class="meta-list">
+                <li><span class="key">Questions</span><span class="value" th:text="${pack.examQuestionCount}">10</span></li>
+                <li><span class="key">Duration</span><span class="value" th:text="|${pack.examDurationMinutes} min|">15 min</span></li>
+                <li><span class="key">Marking</span><span class="value">Automatic</span></li>
+            </ul>
+            <p class="text-small text-muted" style="margin-top:1rem">Treat this as a real exam: close your notes,
+                set a timer, and review the explanations afterwards.</p>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

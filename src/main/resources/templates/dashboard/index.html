@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Dashboard — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Your workspace</p>
+        <h1>Welcome back, <span sec:authentication="principal.fullName">student</span></h1>
+        <p class="lede">Upload material, build a study package and check what still needs revision.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice != null}" th:text="${notice}">Done.</div>
+
+    <div class="stat-row">
+        <div class="stat">
+            <span class="stat-label">Documents</span>
+            <span class="stat-value" th:text="${documentCount}">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Study packages</span>
+            <span class="stat-value" th:text="${studyPackCount}">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Mock exams taken</span>
+            <span class="stat-value" th:text="${attemptCount}">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Best score</span>
+            <span class="stat-value"><span th:text="${bestScore}">0</span><small>%</small></span>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h2>Recent documents</h2>
+            </div>
+            <div class="button-row">
+                <a class="button button-secondary button-small" th:href="@{/documents}">All documents</a>
+                <a class="button button-small" th:href="@{/documents/upload}">Upload document</a>
+            </div>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(documents)}">
+            <h3>No documents yet</h3>
+            <p>Upload lecture notes, a handout or a slide deck to begin. PDF, DOCX, PPTX and several other
+                formats are supported.</p>
+            <a class="button" th:href="@{/documents/upload}">Upload your first document</a>
+        </div>
+
+        <div class="panel" th:unless="${#lists.isEmpty(documents)}">
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Status</th>
+                        <th class="numeric">Text chunks</th>
+                        <th>Added</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="doc : ${documents}">
+                        <td class="cell-title">
+                            <a th:href="@{/documents/{id}(id=${doc.id})}" th:text="${doc.originalFilename}">notes.pdf</a>
+                            <div class="text-small text-muted" th:text="${doc.sizeLabel()}">1.2 MB</div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${doc.status.name() == 'READY'} ? 'badge-ready' :
+                                      (${doc.status.name() == 'FAILED'} ? 'badge-failed' : 'badge-processing')"
+                                  th:text="${doc.status.label()}">Ready</span>
+                        </td>
+                        <td class="numeric" th:text="${doc.chunkCount}">0</td>
+                        <td th:text="${@dates.day(doc.createdAt)}">1 Jan 2026</td>
+                        <td class="numeric">
+                            <a class="text-small" th:href="@{/documents/{id}(id=${doc.id})}">Open</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h2>Study packages</h2>
+            </div>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(studyPacks)}">
+            <h3>No study packages yet</h3>
+            <p>Once a document is ready, generate a study package with notes, flashcards and a mock exam.</p>
+            <a class="button button-secondary" th:href="@{/documents}">Choose a document</a>
+        </div>
+
+        <div class="panel" th:unless="${#lists.isEmpty(studyPacks)}">
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>Study package</th>
+                        <th>Status</th>
+                        <th class="numeric">Flashcards</th>
+                        <th class="numeric">Questions</th>
+                        <th>Created</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="pack : ${studyPacks}">
+                        <td class="cell-title">
+                            <a th:href="@{/study/{id}(id=${pack.id})}" th:text="${pack.title}">Study package</a>
+                            <div class="text-small text-muted" th:text="${pack.documentFilename}">notes.pdf</div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${pack.status.name() == 'READY'} ? 'badge-ready' :
+                                      (${pack.status.name() == 'FAILED'} ? 'badge-failed' : 'badge-processing')"
+                                  th:text="${pack.status.label()}">Ready</span>
+                        </td>
+                        <td class="numeric" th:text="${pack.flashcardCount}">0</td>
+                        <td class="numeric" th:text="${pack.questionCount}">0</td>
+                        <td th:text="${@dates.day(pack.createdAt)}">1 Jan 2026</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h2>Recent mock examinations</h2>
+            </div>
+            <div class="text-small text-muted" th:if="${attemptCount > 0}">
+                Average score: <strong th:text="|${averageScore}%|">0%</strong>
+            </div>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(attempts)}">
+            <h3>No examinations submitted</h3>
+            <p>Sit a timed mock exam from any study package. Your score and the questions to revise will appear
+                here.</p>
+        </div>
+
+        <div class="panel" th:unless="${#lists.isEmpty(attempts)}">
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>Study package</th>
+                        <th class="numeric">Score</th>
+                        <th class="numeric">Questions</th>
+                        <th class="numeric">Time</th>
+                        <th>Submitted</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="attempt : ${attempts}">
+                        <td class="cell-title">
+                            <a th:href="@{/study/{id}(id=${attempt.studyPackId})}"
+                               th:text="${attempt.studyPackTitle}">Study package</a>
+                        </td>
+                        <td class="numeric">
+                            <span class="badge"
+                                  th:classappend="${attempt.percentage >= 70} ? 'badge-ready' :
+                                      (${attempt.percentage >= 40} ? 'badge-processing' : 'badge-failed')"
+                                  th:text="|${attempt.percentage}%|">0%</span>
+                        </td>
+                        <td class="numeric"
+                            th:text="|${attempt.score} / ${attempt.totalQuestions}|">0 / 0</td>
+                        <td class="numeric" th:text="${@dates.minutes(attempt.timeTakenSeconds)}">0m</td>
+                        <td th:text="${@dates.dayTime(attempt.submittedAt)}">1 Jan 2026</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>
