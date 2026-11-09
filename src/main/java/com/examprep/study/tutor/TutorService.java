@@ -67,7 +67,7 @@ public class TutorService {
 
         String prompt = Prompts.tutorPrompt(context.title(), Prompts.renderSources(retrieved), conversation, question);
         String raw = gateway.generate(GeminiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION, prompt,
-                Math.min(properties.getMaxOutputTokens(), 3000)));
+                Math.min(properties.getMaxOutputTokens(), 16384)));
         TutorModelResponse response = parse(raw);
         String answer = response.answer() == null ? "" : response.answer().strip();
         if (answer.isBlank()) {

@@ -41,7 +41,7 @@ public class GenAiGeminiGateway implements GeminiGateway {
         GenerateContentConfig config = GenerateContentConfig.builder()
                 .systemInstruction(systemInstruction)
                 .responseMimeType(prompt.json() ? "application/json" : "text/plain")
-                .temperature((float) properties.getTemperature())
+                // temperature is intentionally not sent: newer Gemini 3.x models manage sampling themselves.
                 .maxOutputTokens(prompt.maxOutputTokens() > 0
                         ? prompt.maxOutputTokens()
                         : properties.getMaxOutputTokens())
@@ -50,6 +50,7 @@ public class GenAiGeminiGateway implements GeminiGateway {
         int attempts = Math.max(1, properties.getMaxRetries() + 1);
         RuntimeException lastFailure = null;
         for (int attempt = 1; attempt <= attempts; attempt++) {
+            long startedAt = System.nanoTime();
             try {
                 GenerateContentResponse response = client.models.generateContent(
                         properties.getModel(), prompt.userPrompt(), config);
@@ -63,8 +64,11 @@ public class GenAiGeminiGateway implements GeminiGateway {
             } catch (RuntimeException exception) {
                 lastFailure = exception;
                 boolean transientFailure = isTransient(exception);
-                log.warn("Gemini request failed on attempt {}/{} with {} (transient={})",
-                        attempt, attempts, exception.getClass().getSimpleName(), transientFailure);
+                // Log the root cause and elapsed time (never the prompt or response) so a timeout,
+                // a DNS/TLS problem and a rejected key can be told apart from the log alone.
+                log.warn("Gemini request failed on attempt {}/{} after {} ms with {} (transient={}): {}",
+                        attempt, attempts, (System.nanoTime() - startedAt) / 1_000_000,
+                        exception.getClass().getSimpleName(), transientFailure, describeCause(exception));
                 if (!transientFailure || attempt == attempts) {
                     break;
                 }
@@ -122,6 +126,25 @@ public class GenAiGeminiGateway implements GeminiGateway {
             return "The configured Gemini model is not available to this API key. Check GEMINI_MODEL.";
         }
         return "Gemini could not be reached or returned an error. Please try again shortly.";
+    }
+
+    private String describeCause(Throwable failure) {
+        StringBuilder builder = new StringBuilder();
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 4) {
+            if (depth > 0) {
+                builder.append(" <- ");
+            }
+            String message = current.getMessage();
+            if (message != null && message.length() > 200) {
+                message = message.substring(0, 200) + "...";
+            }
+            builder.append(current.getClass().getSimpleName()).append(": ").append(message);
+            current = current.getCause();
+            depth++;
+        }
+        return builder.toString();
     }
 
     private String collectMessages(Throwable failure) {

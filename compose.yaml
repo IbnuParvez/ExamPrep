@@ -14,7 +14,8 @@ services:
       timeout: 5s
       retries: 12
     ports:
-      - "5432:5432"
+      # Bound to localhost on 5433 so it never clashes with a Postgres already running on 5432.
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
 
   app:
     build:
@@ -29,7 +30,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-examprep}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
-      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-90}
+      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-240}
       GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-2}
       APP_STORAGE_LOCATION: /app/data/uploads
       APP_MAX_UPLOAD_SIZE_MB: ${APP_MAX_UPLOAD_SIZE_MB:-25}

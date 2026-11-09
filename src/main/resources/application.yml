@@ -49,10 +49,10 @@ examprep:
   ai:
     api-key: ${GOOGLE_API_KEY:}
     model: ${GEMINI_MODEL:gemini-3.8-flash}
-    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:90}
+    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:240}
     max-retries: ${GEMINI_MAX_RETRIES:2}
     temperature: 0.35
-    max-output-tokens: 8192
+    max-output-tokens: 32768
     max-source-chars: 90000
     segment-char-limit: 18000
   processing:

@@ -11,10 +11,10 @@ public class AiProperties {
 
     private String apiKey = "";
     private String model = "gemini-3.8-flash";
-    private int timeoutSeconds = 90;
+    private int timeoutSeconds = 240;
     private int maxRetries = 2;
     private double temperature = 0.35;
-    private int maxOutputTokens = 8192;
+    private int maxOutputTokens = 32768;
     /** Maximum number of source characters handed to a single generation request. */
     private int maxSourceChars = 90_000;
     /** Target size of a single analysis segment for large documents. */

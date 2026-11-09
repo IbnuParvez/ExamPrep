@@ -34,7 +34,11 @@
 
         <div class="header-actions">
             <th:block sec:authorize="isAuthenticated()">
-                <span class="user-name" sec:authentication="principal.fullName">Student</span>
+                <span class="user-chip">
+                    <span class="user-avatar" aria-hidden="true"
+                          th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.fullName, 0, 1))}">S</span>
+                    <span class="user-name" sec:authentication="principal.fullName">Student</span>
+                </span>
                 <form th:action="@{/logout}" method="post" class="inline-form">
                     <button type="submit" class="link-button">Sign out</button>
                 </form>

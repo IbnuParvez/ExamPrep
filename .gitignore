@@ -10,3 +10,7 @@ logs/
 .DS_Store
 !mvnw
 !mvnw.cmd
+
+Dockerfile.local
+Dockerfile.local.dockerignore
+compose.local.yaml
