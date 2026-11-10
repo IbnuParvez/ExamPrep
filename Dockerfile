@@ -4,7 +4,8 @@ WORKDIR /build
 
 # Dependencies are cached separately from application sources.
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 \
+  mvn -B dependency:go-offline
 
 COPY src ./src
 RUN mvn -B -q -DskipTests package
@@ -19,8 +20,8 @@ COPY --from=build /build/target/examprep-1.0.0.jar /app/app.jar
 RUN mkdir -p /app/data/uploads && chown -R examprep:examprep /app
 
 ENV APP_STORAGE_LOCATION=/app/data/uploads \
-    SERVER_PORT=8080 \
-    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+  SERVER_PORT=8080 \
+  JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
 
 USER examprep
 EXPOSE 8080
