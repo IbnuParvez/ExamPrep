@@ -4,6 +4,7 @@ import com.examprep.ai.exception.AiUnavailableException;
 import com.examprep.config.AiProperties;
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
+import com.google.genai.types.HttpRetryOptions;
 
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -36,15 +37,25 @@ public class GeminiClientFactory {
             synchronized (this) {
                 current = client;
                 if (current == null) {
+                    // timeout() becomes OkHttp's whole-call callTimeout, which spans every attempt the SDK
+                    // makes internally. The SDK's RetryInterceptor retries on its own by default, so leaving
+                    // retryOptions unset multiplied our retry loop by the SDK's (up to 15 HTTP calls per
+                    // prompt) and let one callTimeout kill a healthy retry mid-stream. Retries belong to
+                    // GenAiGeminiGateway: exactly one HTTP attempt per call here, each bounded by the
+                    // configured timeout, with explicit backoff and a total time budget above it.
                     HttpOptions httpOptions = HttpOptions.builder()
                             .timeout(Math.max(10, properties.getTimeoutSeconds()) * 1000)
+                            .retryOptions(HttpRetryOptions.builder()
+                                    .attempts(1)
+                                    .build())
                             .build();
                     current = Client.builder()
                             .apiKey(properties.getApiKey())
                             .httpOptions(httpOptions)
                             .build();
                     client = current;
-                    log.info("Gemini client initialised for model {}", properties.getModel());
+                    log.info("Gemini client initialised for model {} (one HTTP attempt per call, retries handled by the gateway)",
+                            properties.getModel());
                 }
             }
         }

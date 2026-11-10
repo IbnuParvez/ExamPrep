@@ -13,8 +13,17 @@ public class AiProperties {
     private String model = "gemini-3.8-flash";
     private int timeoutSeconds = 240;
     private int maxRetries = 2;
+    /** Base delay before retrying a transient failure; doubled on every further attempt. */
+    private int retryBaseDelayMillis = 5_000;
     private double temperature = 0.35;
-    private int maxOutputTokens = 32768;
+    /**
+     * Ceiling for a single answer, including the model's internal thinking tokens. gemini-3.8-flash
+     * supports 65536; at 32768 the thinking pass regularly consumed the whole budget before any
+     * answer (or JSON) was emitted, which surfaced as an empty or truncated response.
+     */
+    private int maxOutputTokens = 65_536;
+    /** Thinking effort for Gemini 3.x models: {@code low}, {@code medium} or {@code high}. */
+    private String thinkingLevel = "low";
     /** Maximum number of source characters handed to a single generation request. */
     private int maxSourceChars = 90_000;
     /** Target size of a single analysis segment for large documents. */
@@ -58,6 +67,14 @@ public class AiProperties {
         this.maxRetries = maxRetries;
     }
 
+    public int getRetryBaseDelayMillis() {
+        return retryBaseDelayMillis;
+    }
+
+    public void setRetryBaseDelayMillis(int retryBaseDelayMillis) {
+        this.retryBaseDelayMillis = retryBaseDelayMillis;
+    }
+
     public double getTemperature() {
         return temperature;
     }
@@ -72,6 +89,14 @@ public class AiProperties {
 
     public void setMaxOutputTokens(int maxOutputTokens) {
         this.maxOutputTokens = maxOutputTokens;
+    }
+
+    public String getThinkingLevel() {
+        return thinkingLevel;
+    }
+
+    public void setThinkingLevel(String thinkingLevel) {
+        this.thinkingLevel = thinkingLevel;
     }
 
     public int getMaxSourceChars() {

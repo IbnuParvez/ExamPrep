@@ -142,8 +142,11 @@ locally. Docker Compose reads `.env` automatically.
 | --- | --- | --- |
 | `GOOGLE_API_KEY` | Gemini Developer API key | *(empty — AI disabled)* |
 | `GEMINI_MODEL` | Model used for all AI operations | `gemini-3.8-flash` |
-| `GEMINI_TIMEOUT_SECONDS` | Per-request timeout | `90` |
-| `GEMINI_MAX_RETRIES` | Retries for transient 429/5xx failures | `2` |
+| `GEMINI_TIMEOUT_SECONDS` | Timeout for one Gemini attempt, and the total budget a retried call may use | `240` |
+| `GEMINI_MAX_RETRIES` | Retries for transient 429/5xx failures, only while they fit that budget | `2` |
+| `GEMINI_RETRY_BASE_DELAY_MS` | Backoff before a retry; doubles after each further failure | `5000` |
+| `GEMINI_MAX_OUTPUT_TOKENS` | Output ceiling for one answer, including internal thinking tokens | `65536` |
+| `GEMINI_THINKING_LEVEL` | Thinking effort for Gemini 3.x models: `low`, `medium` or `high` | `low` |
 | `SPRING_DATASOURCE_URL` | JDBC URL | `jdbc:postgresql://localhost:5432/examprep` |
 | `SPRING_DATASOURCE_USERNAME` | Database user | `examprep` |
 | `SPRING_DATASOURCE_PASSWORD` | Database password | `examprep` |
