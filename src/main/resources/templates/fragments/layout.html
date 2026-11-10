@@ -1,76 +1,100 @@
 <!DOCTYPE html>
-<html lang="en"
+<html lang="en-GB"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:fragment="layout(title, content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="ExamPrep turns your lecture notes, PDFs and slides into revision notes, flashcards, practice questions and a timed mock examination.">
+    <meta name="theme-color" content="#0B1426">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ExamPrep">
+    <meta property="og:title" content="ExamPrep &mdash; turn your course material into an exam plan">
+    <meta property="og:description" content="Upload a PDF, Word document or slides and get revision notes, flashcards, practice questions and a timed mock exam.">
     <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}">
     <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}">
     <title th:replace="${title}">ExamPrep</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/images/favicon.svg}">
+    <link rel="preload" as="font" type="font/woff2" crossorigin th:href="@{/css/fonts/source-serif-4-latin-wght-normal.woff2}">
+    <link rel="preload" as="font" type="font/woff2" crossorigin th:href="@{/css/fonts/inter-latin-wght-normal.woff2}">
+    <link rel="stylesheet" th:href="@{/css/tokens.css}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script th:src="@{/js/shell.js}"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 
-<header class="site-header">
+<header class="site-header" id="site-header">
     <div class="shell header-inner">
         <a class="wordmark" th:href="@{/}">
             <span class="wordmark-mark" aria-hidden="true">E</span>
             <span>ExamPrep</span>
         </a>
 
-        <nav class="site-nav" aria-label="Primary">
-            <th:block sec:authorize="isAuthenticated()">
-                <a th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? 'is-active'">Dashboard</a>
-                <a th:href="@{/documents}" th:classappend="${activeNav == 'documents'} ? 'is-active'">Documents</a>
-                <a th:href="@{/documents/upload}" th:classappend="${activeNav == 'upload'} ? 'is-active'">Upload</a>
-            </th:block>
-            <a sec:authorize="!isAuthenticated()" href="#how-it-works">How it works</a>
-            <a sec:authorize="!isAuthenticated()" th:href="@{/privacy}">Privacy</a>
-        </nav>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+            <span class="sr-only">Menu</span>
+            <svg class="i-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <svg class="i-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
 
-        <div class="header-actions">
-            <th:block sec:authorize="isAuthenticated()">
-                <span class="user-chip">
-                    <span class="user-avatar" aria-hidden="true"
-                          th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.fullName, 0, 1))}">S</span>
-                    <span class="user-name" sec:authentication="principal.fullName">Student</span>
-                </span>
-                <form th:action="@{/logout}" method="post" class="inline-form">
-                    <button type="submit" class="link-button">Sign out</button>
-                </form>
-            </th:block>
-            <th:block sec:authorize="!isAuthenticated()">
-                <a class="link-quiet" th:href="@{/login}">Sign in</a>
-                <a class="button button-primary button-small" th:href="@{/register}">Create account</a>
-            </th:block>
+        <div class="site-menu" id="site-menu">
+            <nav class="site-nav" aria-label="Primary">
+                <th:block sec:authorize="isAuthenticated()">
+                    <a th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? 'is-active'">Dashboard</a>
+                    <a th:href="@{/documents}" th:classappend="${activeNav == 'documents'} ? 'is-active'">Documents</a>
+                    <a th:href="@{/documents/upload}" th:classappend="${activeNav == 'upload'} ? 'is-active'">Upload</a>
+                </th:block>
+                <a sec:authorize="!isAuthenticated()" th:href="@{/#how-it-works}">How it works</a>
+                <a sec:authorize="!isAuthenticated()" th:href="@{/privacy}">Privacy</a>
+            </nav>
+
+            <div class="header-actions">
+                <th:block sec:authorize="isAuthenticated()">
+                    <span class="user-chip">
+                        <span class="user-avatar" aria-hidden="true"
+                              th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.fullName, 0, 1))}">S</span>
+                        <span class="user-name" sec:authentication="principal.fullName">Student</span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" class="inline-form">
+                        <button type="submit" class="link-button">Sign out</button>
+                    </form>
+                </th:block>
+                <th:block sec:authorize="!isAuthenticated()">
+                    <a class="link-quiet" th:href="@{/login}">Sign in</a>
+                    <a class="button button-light button-small" th:href="@{/register}">Create account</a>
+                </th:block>
+            </div>
         </div>
     </div>
 </header>
 
-<main id="main" class="shell page">
+<div id="main" class="page-frame" tabindex="-1">
     <th:block th:replace="${content}"></th:block>
-</main>
+</div>
 
 <footer class="site-footer">
-    <div class="shell footer-inner">
-        <div>
-            <p class="footer-brand">ExamPrep</p>
-            <p class="footer-note">Study material is processed with Google's Gemini API. Review generated
-                content against your course materials before relying on it.</p>
+    <div class="shell">
+        <div class="footer-inner">
+            <div>
+                <p class="footer-brand">ExamPrep</p>
+                <p class="footer-note">Study material is processed with Google&rsquo;s Gemini API. Review generated
+                    content against your course materials before relying on it.</p>
+            </div>
+            <nav class="footer-nav" aria-label="Secondary">
+                <a th:href="@{/privacy}">Privacy</a>
+                <a th:href="@{/#how-it-works}">How it works</a>
+                <a sec:authorize="isAuthenticated()" th:href="@{/documents/upload}">Upload</a>
+                <a sec:authorize="!isAuthenticated()" th:href="@{/login}">Sign in</a>
+                <a sec:authorize="!isAuthenticated()" th:href="@{/register}">Create account</a>
+            </nav>
         </div>
-        <nav class="footer-nav" aria-label="Secondary">
-            <a th:href="@{/privacy}">Privacy</a>
-            <a sec:authorize="isAuthenticated()" th:href="@{/documents/upload}">Upload</a>
-            <a sec:authorize="!isAuthenticated()" th:href="@{/register}">Create account</a>
-        </nav>
+        <p class="footer-legal">&copy; ExamPrep</p>
     </div>
 </footer>
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="sr-live" class="sr-only" role="status" aria-live="polite"></div>
 <script th:src="@{/js/app.js}" defer></script>
 </body>
 </html>

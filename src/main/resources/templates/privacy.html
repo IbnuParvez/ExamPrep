@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="en-GB" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
 <head>
-    <title>Privacy notice — ExamPrep</title>
+    <title>Privacy notice &mdash; ExamPrep</title>
 </head>
 <body>
 <main>
@@ -11,6 +11,22 @@
         <h1>How ExamPrep handles your material</h1>
         <p class="lede">A plain-language summary of what happens to the documents you upload.</p>
     </div>
+
+    <aside class="promise" style="margin:0 0 2.5rem" aria-label="Privacy promise">
+        <svg class="promise-seal" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <g class="seal-fill"><circle cx="41" cy="24" r="4.5"/><circle cx="36" cy="36" r="4.5"/><circle cx="24" cy="41" r="4.5"/><circle cx="12" cy="36" r="4.5"/>
+                <circle cx="7" cy="24" r="4.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="24" cy="7" r="4.5"/><circle cx="36" cy="12" r="4.5"/></g>
+            <circle class="seal-fill" cx="24" cy="24" r="16.5"/>
+            <circle class="seal-ring" cx="24" cy="24" r="11.5" stroke-width="1.2"/>
+            <path class="seal-mark" d="m18 24.5 4 4 8-9" stroke-width="2"/>
+        </svg>
+        <div>
+            <p class="promise-title">Privacy promise</p>
+            <p>Your documents stay private to your account. Extracted text is sent to Google&rsquo;s Gemini API
+                only to generate your study material or answer a tutor question. You can delete documents and
+                study packages at any time.</p>
+        </div>
+    </aside>
 
     <div class="content-grid">
         <article class="prose">
@@ -21,7 +37,7 @@
                 URL.</p>
 
             <h2>How Google Gemini is used</h2>
-            <p>To generate study material, relevant extracted text from your document is sent to Google's
+            <p>To generate study material, relevant extracted text from your document is sent to Google&rsquo;s
                 Gemini API, along with your study preferences. The API key stays on the server and is never
                 exposed to your browser. Tutor questions are sent together with the most relevant document
                 sections so answers can be grounded in your material.</p>
@@ -33,6 +49,7 @@
                 <li>Your documents are not published, shared with other students or used as public examples.</li>
                 <li>No advertising or analytics trackers are embedded in the application.</li>
                 <li>No third-party AI provider other than the configuration described above is used.</li>
+                <li>Fonts are served from this site, so your browser makes no third-party font requests.</li>
             </ul>
 
             <h2>Deleting your data</h2>

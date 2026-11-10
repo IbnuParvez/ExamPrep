@@ -1,157 +1,247 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="en-GB" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
 <head>
-    <title>ExamPrep — turn your course material into an exam plan</title>
+    <title>ExamPrep &mdash; turn your course material into an exam plan</title>
 </head>
 <body>
-<main>
+<main class="landing">
     <section class="hero">
-        <div>
-            <p class="eyebrow">AI examination preparation</p>
-            <h1>Turn your lecture notes into a study plan that fits the exam.</h1>
-            <p class="lead">Upload a PDF, Word document or set of slides. ExamPrep reads the material,
-                organises the topics and builds revision notes, flashcards, practice questions and a timed
-                mock examination from what you actually have to learn.</p>
-            <div class="hero-actions">
-                <a class="button" th:href="@{/register}">Create a free account</a>
-                <a class="button button-secondary" th:href="@{/login}">I already have an account</a>
+        <svg class="hero-art" viewBox="0 0 800 640" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <g class="m1">
+                <path d="M560 120L640 200M560 120L520 240M560 120L700 80M640 200L700 320M640 200L520 240M640 200L700 80M520 240L600 360M520 240L420 190M520 240L480 380M700 320L600 360M600 360L480 380M420 190L560 120"/>
+                <circle cx="560" cy="120" r="7"/><circle cx="640" cy="200" r="7"/><circle cx="520" cy="240" r="7"/><circle cx="700" cy="320" r="7"/>
+                <circle cx="600" cy="360" r="7"/><circle cx="480" cy="380" r="7"/><circle cx="700" cy="80" r="7"/><circle cx="420" cy="190" r="7"/>
+            </g>
+            <g class="m2"><path d="M650 570C610 540 560 536 520 552V480C560 464 610 468 650 498ZM650 570C690 540 740 536 780 552V480C740 464 690 468 650 498ZM650 498V570"/></g>
+            <g class="m3"><circle cx="360" cy="520" r="32"/><path d="M383 543L412 572"/></g>
+            <g class="m4"><path d="M250 170H370L250 70ZM250 150H270V170"/><circle cx="310" cy="125" r="24"/>
+                <text x="300" y="240" font-size="22" font-family="Georgia,serif">dy/dx</text></g>
+            <g class="m5"><text x="250" y="440" font-size="20" font-family="Georgia,serif">ax&#178; + bx + c = 0</text>
+                <text x="470" y="450" font-size="15" font-family="ui-monospace,monospace">def f(a): return a + 1</text></g>
+        </svg>
+
+        <div class="shell hero-inner">
+            <div class="hero-copy">
+                <p class="eyebrow">AI examination preparation</p>
+                <h1>Turn your lecture notes into a <span class="key-chip">study plan</span> that fits the exam.</h1>
+                <p class="lead">Upload a PDF, Word document or set of slides. ExamPrep reads the material,
+                    organises the topics and builds revision notes, flashcards, practice questions and a timed
+                    mock examination from what you actually have to learn.</p>
+                <div class="hero-actions">
+                    <a class="button button-light" th:href="@{/register}">Create a free account</a>
+                    <a class="button button-outline-light" th:href="@{/login}">I already have an account</a>
+                </div>
+
+                <aside class="promise" aria-label="Privacy promise">
+                    <svg class="promise-seal" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                        <g class="seal-fill"><circle cx="41" cy="24" r="4.5"/><circle cx="36" cy="36" r="4.5"/><circle cx="24" cy="41" r="4.5"/><circle cx="12" cy="36" r="4.5"/>
+                            <circle cx="7" cy="24" r="4.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="24" cy="7" r="4.5"/><circle cx="36" cy="12" r="4.5"/></g>
+                        <circle class="seal-fill" cx="24" cy="24" r="16.5"/>
+                        <circle class="seal-ring" cx="24" cy="24" r="11.5" stroke-width="1.2"/>
+                        <path class="seal-mark" d="m18 24.5 4 4 8-9" stroke-width="2"/>
+                    </svg>
+                    <div>
+                        <p class="promise-title">Privacy promise</p>
+                        <p>Your documents stay private to your account. Extracted text is sent to Google&rsquo;s
+                            Gemini API only to generate your study material. You can delete them at any time.</p>
+                    </div>
+                </aside>
+
+                <div class="alert alert-warning" th:if="${!aiConfigured}">
+                    <span class="alert-title">AI is not configured on this server yet</span>
+                    An administrator needs to set <span class="mono">GOOGLE_API_KEY</span>. You can still register,
+                    upload and extract documents, but study generation and the tutor will report a configuration
+                    error until it is set.
+                </div>
             </div>
-            <p class="hero-note">Your documents stay private to your account. Extracted text is sent to Google's
-                Gemini API only to generate your study material. You can delete them at any time.</p>
-            <div class="alert alert-warning" style="margin-top:1.4rem" th:if="${!aiConfigured}">
-                <span class="alert-title">AI is not configured on this server yet</span>
-                An administrator needs to set <span class="mono">GOOGLE_API_KEY</span>. You can still register,
-                upload and extract documents, but study generation and the tutor will report a configuration
-                error until it is set.
-            </div>
-        </div>
-        <div class="preview-card" aria-hidden="true">
-            <div class="preview-top">
-                <span>Microeconomics — Lecture 4.pdf</span>
-                <span class="badge badge-ready">Ready</span>
-            </div>
-            <p class="preview-title">Elasticity and market responses</p>
-            <div class="preview-line w-90"></div>
-            <div class="preview-line w-75"></div>
-            <div class="preview-line w-60"></div>
-            <div class="preview-chips">
-                <span class="preview-chip">Summary</span>
-                <span class="preview-chip">18 flashcards</span>
-                <span class="preview-chip">12 questions</span>
-                <span class="preview-chip">Mock exam</span>
-                <span class="preview-chip">Tutor</span>
+
+            <div class="demo" data-demo role="group" aria-label="Sample study package preview">
+                <div class="demo-top">
+                    <span>Microeconomics &mdash; Lecture 4.pdf</span>
+                    <span class="badge badge-neutral">Sample</span>
+                </div>
+                <p class="demo-title">Elasticity and market responses</p>
+
+                <div class="demo-tabs" role="tablist" aria-label="Sample study material">
+                    <button type="button" role="tab" id="demo-tab-summary" aria-selected="true" aria-controls="demo-panel-summary">Summary</button>
+                    <button type="button" role="tab" id="demo-tab-cards" aria-selected="false" aria-controls="demo-panel-cards" tabindex="-1">Flashcards</button>
+                    <button type="button" role="tab" id="demo-tab-questions" aria-selected="false" aria-controls="demo-panel-questions" tabindex="-1">Questions</button>
+                    <button type="button" role="tab" id="demo-tab-exam" aria-selected="false" aria-controls="demo-panel-exam" tabindex="-1">Mock exam</button>
+                    <button type="button" role="tab" id="demo-tab-tutor" aria-selected="false" aria-controls="demo-panel-tutor" tabindex="-1">Tutor</button>
+                </div>
+
+                <div class="demo-panel" role="tabpanel" id="demo-panel-summary" aria-labelledby="demo-tab-summary" tabindex="0">
+                    <p>Price elasticity of demand measures how strongly buyers react when a price changes. When
+                        demand is elastic, a price rise cuts the quantity sold by a larger percentage, so revenue
+                        falls. When it is inelastic, revenue rises.</p>
+                    <p><span class="source">Page 4</span><span class="source">Slide 12</span></p>
+                </div>
+
+                <div class="demo-panel" role="tabpanel" id="demo-panel-cards" aria-labelledby="demo-tab-cards" tabindex="0" hidden>
+                    <button type="button" class="flip" aria-pressed="false">
+                        <span class="flip-inner">
+                            <span class="flip-face front"><span class="flip-label">Prompt</span>
+                                <span class="flip-text">What does price elasticity of demand measure?</span></span>
+                            <span class="flip-face back" aria-hidden="true"><span class="flip-label">Answer</span>
+                                <span class="flip-text">The percentage change in quantity demanded divided by the percentage change in price.</span></span>
+                        </span>
+                    </button>
+                    <p class="demo-hint">Click or press Space to flip the card.</p>
+                </div>
+
+                <div class="demo-panel" role="tabpanel" id="demo-panel-questions" aria-labelledby="demo-tab-questions" tabindex="0" hidden>
+                    <p class="demo-q">If demand for a product is elastic, what usually happens to total revenue when its price rises?</p>
+                    <ul class="option-list"><li>A. It falls</li><li>B. It rises</li><li>C. It stays the same</li></ul>
+                    <details class="demo-reveal">
+                        <summary>Reveal answer</summary>
+                        <div class="answer-panel"><p><strong>Suggested answer:</strong> A. It falls.</p>
+                            <p>Buyers cut their purchases by a larger percentage than the price rose, so price multiplied by quantity goes down.</p></div>
+                    </details>
+                </div>
+
+                <div class="demo-panel" role="tabpanel" id="demo-panel-exam" aria-labelledby="demo-tab-exam" tabindex="0" hidden>
+                    <div class="demo-exam-head"><span>Question 1 of 12</span><span class="timer" aria-label="Sample time limit: 15 minutes">15:00</span></div>
+                    <p class="demo-q">True or false: when demand is inelastic, raising the price tends to increase total revenue.</p>
+                    <div class="exam-options">
+                        <label class="exam-option"><input type="radio" name="demo-tf" value="true"><span>True</span></label>
+                        <label class="exam-option"><input type="radio" name="demo-tf" value="false"><span>False</span></label>
+                    </div>
+                    <p class="demo-hint">Timed and marked automatically. Answers stay on the server until you submit.</p>
+                </div>
+
+                <div class="demo-panel" role="tabpanel" id="demo-panel-tutor" aria-labelledby="demo-tab-tutor" tabindex="0" hidden>
+                    <div class="message user"><div class="message-role">You</div>
+                        <div class="message-body">Why does revenue fall when demand is elastic?</div></div>
+                    <div class="message" style="margin-top:.9rem"><div class="message-role">ExamPrep tutor</div>
+                        <div class="message-body">Buyers cut their quantity by a larger percentage than the price rose, so price multiplied by quantity goes down.</div>
+                        <div class="message-sources"><span class="source">Page 4</span></div></div>
+                </div>
+
+                <p class="demo-note">Sample content for illustration. Your own package is generated from your document.</p>
             </div>
         </div>
     </section>
 
-    <section class="section" id="how-it-works">
-        <div class="section-head">
-            <div>
-                <p class="eyebrow">How it works</p>
-                <h2>From a document to exam practice in four steps</h2>
-            </div>
-        </div>
-        <div class="steps">
-            <article class="step">
-                <span class="step-number">01</span>
-                <h3>Upload your material</h3>
-                <p>PDF, DOCX, PPTX, TXT, Markdown, RTF, ODT or ODP, up to 25&nbsp;MB. Text is extracted with
-                    real page and slide references.</p>
-            </article>
-            <article class="step">
-                <span class="step-number">02</span>
-                <h3>Choose how you study</h3>
-                <p>Set your academic level, exam date and how many flashcards, practice questions and exam
-                    questions you want.</p>
-            </article>
-            <article class="step">
-                <span class="step-number">03</span>
-                <h3>Work through the package</h3>
-                <p>Study the summary, topics and revision notes, then test yourself with flashcards and
-                    practice questions.</p>
-            </article>
-            <article class="step">
-                <span class="step-number">04</span>
-                <h3>Sit a timed mock exam</h3>
-                <p>Answer under exam conditions, submit, and see your score, the correct answers and the
-                    sections that need another pass.</p>
-            </article>
+    <section class="strip" aria-labelledby="strip-title">
+        <div class="shell strip-inner">
+            <h2 class="strip-title" id="strip-title">Works with your material</h2>
+            <ul class="file-types" aria-label="Accepted file types">
+                    <li><span class="file-type">PDF</span></li>
+                    <li><span class="file-type">DOCX</span></li>
+                    <li><span class="file-type">DOC</span></li>
+                    <li><span class="file-type">PPTX</span></li>
+                    <li><span class="file-type">PPT</span></li>
+                    <li><span class="file-type">TXT</span></li>
+                    <li><span class="file-type">MD</span></li>
+                    <li><span class="file-type">RTF</span></li>
+                    <li><span class="file-type">ODT</span></li>
+                    <li><span class="file-type">ODP</span></li>
+            </ul>
+            <ul class="strip-facts">
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8M16 17H8"/></svg>Up to 25&nbsp;MB per file</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Private to your account</li>
+                <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>Delete any time</li>
+            </ul>
         </div>
     </section>
 
-    <section class="section">
-        <div class="section-head">
-            <div>
-                <p class="eyebrow">What you get</p>
-                <h2>A complete study workspace, not a chat window</h2>
+    <section class="section" id="how-it-works" data-reveal>
+        <div class="shell">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">How it works</p>
+                    <h2>From a document to exam practice in four steps</h2>
+                </div>
             </div>
-        </div>
-        <div class="feature-grid">
-            <article class="feature">
-                <h3>Structured revision notes</h3>
-                <p>Topics, subtopics and readable notes that keep the meaning of your source material instead
-                    of restating it as vague bullet points.</p>
-            </article>
-            <article class="feature">
-                <h3>Glossary and formula sheet</h3>
-                <p>Definitions and formulas drawn from the document, each linked back to the page or slide it
-                    came from.</p>
-            </article>
-            <article class="feature">
-                <h3>Flashcards that flip</h3>
-                <p>Review a whole deck, reveal answers and move at your own pace. ExamPrep records the review
-                    so your progress view stays honest.</p>
-            </article>
-            <article class="feature">
-                <h3>Mixed practice questions</h3>
-                <p>Multiple choice, true or false and short answer questions with explanations and difficulty
-                    labels.</p>
-            </article>
-            <article class="feature">
-                <h3>Timed mock examinations</h3>
-                <p>A countdown, question navigation and automatic marking. Answers stay on the server until
-                    you submit.</p>
-            </article>
-            <article class="feature">
-                <h3>A tutor grounded in your notes</h3>
-                <p>Ask questions, get explanations tied to the relevant pages, and be told plainly when the
-                    document does not cover something.</p>
-            </article>
+            <ol class="steps" style="list-style:none;padding:0;margin:0">
+                <li class="step">
+                    <span class="step-number" aria-hidden="true">01</span>
+                    <h3>Upload your material</h3>
+                    <p>PDF, DOCX, PPTX, TXT, Markdown, RTF, ODT or ODP, up to 25&nbsp;MB. Text is extracted with
+                        real page and slide references.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number" aria-hidden="true">02</span>
+                    <h3>Choose how you study</h3>
+                    <p>Set your academic level, exam date and how many flashcards, practice questions and exam
+                        questions you want.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number" aria-hidden="true">03</span>
+                    <h3>Work through the package</h3>
+                    <p>Study the summary, topics and revision notes, then test yourself with flashcards and
+                        practice questions.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number" aria-hidden="true">04</span>
+                    <h3>Sit a timed mock exam</h3>
+                    <p>Answer under exam conditions, submit, and see your score, the correct answers and the
+                        sections that need another pass.</p>
+                </li>
+            </ol>
         </div>
     </section>
 
-    <section class="section">
-        <div class="callout">
+    <section class="section section-tint" data-reveal>
+        <div class="shell">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">What you get</p>
+                    <h2>A complete study workspace, not a chat window</h2>
+                </div>
+            </div>
+            <div class="feature-grid">
+                <article class="feature"><h3>Structured revision notes</h3>
+                    <p>Topics, subtopics and readable notes that keep the meaning of your source material instead
+                        of restating it as vague bullet points.</p></article>
+                <article class="feature"><h3>Glossary and formula sheet</h3>
+                    <p>Definitions and formulas drawn from the document, each linked back to the page or slide it
+                        came from.</p></article>
+                <article class="feature"><h3>Flashcards that flip</h3>
+                    <p>Review a whole deck, reveal answers and move at your own pace. ExamPrep records the review
+                        so your progress view stays honest.</p></article>
+                <article class="feature"><h3>Mixed practice questions</h3>
+                    <p>Multiple choice, true or false and short answer questions with explanations and difficulty
+                        labels.</p></article>
+                <article class="feature"><h3>Timed mock examinations</h3>
+                    <p>A countdown, question navigation and automatic marking. Answers stay on the server until
+                        you submit.</p></article>
+                <article class="feature"><h3>A tutor grounded in your notes</h3>
+                    <p>Ask questions, get explanations tied to the relevant pages, and be told plainly when the
+                        document does not cover something.</p></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" data-reveal>
+        <div class="shell">
+            <div class="section-head"><h2>Good to know</h2></div>
+            <div class="feature-grid">
+                <article class="feature"><h3>Generated content is assistance</h3>
+                    <p>AI output can be incomplete or wrong. Treat it as a study aid and check important claims
+                        against your course material and your lecturer&rsquo;s guidance.</p></article>
+                <article class="feature"><h3>Scanned PDFs need OCR</h3>
+                    <p>If a PDF is only images, text extraction cannot read it. ExamPrep explains this clearly
+                        rather than producing empty study notes.</p></article>
+                <article class="feature"><h3>You control your data</h3>
+                    <p>Delete a document and its study packages, examinations and tutor conversations are removed
+                        with it. Read the <a th:href="@{/privacy}">privacy notice</a>.</p></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-band">
+        <div class="shell cta-inner">
             <div>
                 <h2>Bring one document. Leave with a revision plan.</h2>
-                <p class="text-muted">Free to create an account. Your first study package takes a minute or two
-                    to generate.</p>
+                <p>Free to create an account. Your first study package takes a minute or two to generate.</p>
             </div>
-            <a class="button" th:href="@{/register}">Start studying</a>
+            <a class="button button-light" th:href="@{/register}">Start studying</a>
         </div>
     </section>
 
-    <section class="section">
-        <h2>Good to know</h2>
-        <div class="feature-grid">
-            <article class="feature">
-                <h3>Generated content is assistance</h3>
-                <p>AI output can be incomplete or wrong. Treat it as a study aid and check important claims
-                    against your course material and lecturer's guidance.</p>
-            </article>
-            <article class="feature">
-                <h3>Scanned PDFs need OCR</h3>
-                <p>If a PDF is only images, text extraction cannot read it. ExamPrep explains this clearly
-                    rather than producing empty study notes.</p>
-            </article>
-            <article class="feature">
-                <h3>You control your data</h3>
-                <p>Delete a document and its study packages, examinations and tutor conversations are removed
-                    with it. Read the <a th:href="@{/privacy}">privacy notice</a>.</p>
-            </article>
-        </div>
-    </section>
+    <script th:src="@{/js/landing.js}" defer></script>
 </main>
 </body>
 </html>

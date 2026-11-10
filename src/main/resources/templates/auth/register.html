@@ -21,27 +21,27 @@
                 <div class="field">
                     <label for="fullName">Full name</label>
                     <input type="text" id="fullName" th:field="*{fullName}" autocomplete="name"
-                           th:classappend="${#fields.hasErrors('fullName')} ? 'input-invalid'">
-                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'input-invalid'" th:attr="aria-describedby=${#fields.hasErrors('fullName')} ? 'fullName-error'">
+                    <span class="field-error" id="fullName-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
                 </div>
                 <div class="field">
                     <label for="email">Email address</label>
                     <input type="email" id="email" th:field="*{email}" autocomplete="email"
-                           th:classappend="${#fields.hasErrors('email')} ? 'input-invalid'">
-                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                           th:classappend="${#fields.hasErrors('email')} ? 'input-invalid'" th:attr="aria-describedby=${#fields.hasErrors('email')} ? 'email-error'">
+                    <span class="field-error" id="email-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
                 </div>
                 <div class="field">
                     <label for="password">Password</label>
                     <input type="password" id="password" th:field="*{password}" autocomplete="new-password"
-                           th:classappend="${#fields.hasErrors('password')} ? 'input-invalid'">
+                           th:classappend="${#fields.hasErrors('password')} ? 'input-invalid'" th:attr="aria-describedby=${#fields.hasErrors('password')} ? 'password-error'">
                     <p class="hint">At least 8 characters.</p>
-                    <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+                    <span class="field-error" id="password-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
                 </div>
                 <div class="field">
                     <label for="passwordConfirm">Confirm password</label>
                     <input type="password" id="passwordConfirm" th:field="*{passwordConfirm}" autocomplete="new-password"
-                           th:classappend="${#fields.hasErrors('passwordConfirm')} ? 'input-invalid'">
-                    <span class="field-error" th:if="${#fields.hasErrors('passwordConfirm')}"
+                           th:classappend="${#fields.hasErrors('passwordConfirm')} ? 'input-invalid'" th:attr="aria-describedby=${#fields.hasErrors('passwordConfirm')} ? 'passwordConfirm-error'">
+                    <span class="field-error" id="passwordConfirm-error" th:if="${#fields.hasErrors('passwordConfirm')}"
                           th:errors="*{passwordConfirm}"></span>
                 </div>
                 <div class="form-actions">
