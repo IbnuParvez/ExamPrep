@@ -35,9 +35,13 @@
                     <div id="status-in-progress" th:if="${document.inProgress()}">
                         <p>We are reading this document and dividing the text into citable chunks. This usually
                             takes a few seconds.</p>
-                        <div class="progress">
-                            <div class="progress-bar" style="width:35%"></div>
-                        </div>
+                        <ol class="stepper" aria-label="Extraction progress">
+                            <li th:classappend="${document.status.name() == 'UPLOADED'} ? 'is-current' : 'is-done'"
+                                th:attr="aria-current=${document.status.name() == 'UPLOADED'} ? 'step'">Uploaded</li>
+                            <li th:classappend="${document.status.name() == 'PROCESSING'} ? 'is-current'"
+                                th:attr="aria-current=${document.status.name() == 'PROCESSING'} ? 'step'">Extracting text</li>
+                            <li>Ready</li>
+                        </ol>
                     </div>
 
                     <div id="status-ready" th:if="${document.ready()}">

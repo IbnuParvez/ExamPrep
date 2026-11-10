@@ -15,7 +15,7 @@
             </div>
         </div>
         <div class="timer" id="exam-timer" th:attr="data-remaining=${remainingSeconds}"
-             aria-live="polite">--:--</div>
+             role="timer" aria-live="off">--:--</div>
     </div>
 
     <form id="exam-form" th:action="@{/exam/{id}/submit(id=${exam.attemptId})}" method="post"

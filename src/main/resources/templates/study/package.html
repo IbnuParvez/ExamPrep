@@ -31,16 +31,16 @@
     </div>
 
     <nav class="tabs" aria-label="Study package sections">
-        <a class="tab" th:classappend="${tab == 'overview'} ? 'is-active'"
+        <a class="tab" th:classappend="${tab == 'overview'} ? 'is-active'" th:attr="aria-current=${tab == 'overview'} ? 'page'"
            th:href="@{/study/{id}(id=${pack.id},tab='overview')}">Overview</a>
-        <a class="tab" th:classappend="${tab == 'topics'} ? 'is-active'"
+        <a class="tab" th:classappend="${tab == 'topics'} ? 'is-active'" th:attr="aria-current=${tab == 'topics'} ? 'page'"
            th:href="@{/study/{id}(id=${pack.id},tab='topics')}">
             Topics (<span th:text="${#lists.size(pack.topics)}">0</span>)</a>
-        <a class="tab" th:classappend="${tab == 'notes'} ? 'is-active'"
+        <a class="tab" th:classappend="${tab == 'notes'} ? 'is-active'" th:attr="aria-current=${tab == 'notes'} ? 'page'"
            th:href="@{/study/{id}(id=${pack.id},tab='notes')}">Revision notes</a>
-        <a class="tab" th:classappend="${tab == 'definitions'} ? 'is-active'"
+        <a class="tab" th:classappend="${tab == 'definitions'} ? 'is-active'" th:attr="aria-current=${tab == 'definitions'} ? 'page'"
            th:href="@{/study/{id}(id=${pack.id},tab='definitions')}">Definitions</a>
-        <a class="tab" th:classappend="${tab == 'formulas'} ? 'is-active'"
+        <a class="tab" th:classappend="${tab == 'formulas'} ? 'is-active'" th:attr="aria-current=${tab == 'formulas'} ? 'page'"
            th:href="@{/study/{id}(id=${pack.id},tab='formulas')}">Formulas</a>
         <a class="tab" th:href="@{/study/{id}/flashcards(id=${pack.id})}">Flashcards</a>
         <a class="tab" th:href="@{/study/{id}/practice(id=${pack.id})}">Practice</a>
