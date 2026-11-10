@@ -23,7 +23,7 @@ GetOptions('no-fonts' => \$no_fonts, 'no-git' => \$no_git,
            'no-patch' => \$no_patch, 'help|h' => \$help) or exit 2;
 sub usage {
     print "Usage: perl redesign.pl [project-root] [--no-fonts] [--no-git] [--no-patch]\n",
-          "  --no-fonts   skip downloading Inter and Source Serif 4 (falls back to system fonts)\n",
+          "  --no-fonts   skip downloading Bricolage Grotesque (falls back to system fonts)\n",
           "  --no-git     do not create the branch or commit\n",
           "  --no-patch   do not patch existing templates (CSS and new files only)\n";
 }
@@ -89,9 +89,10 @@ my $file_types = join("\n", map { sprintf('                    <li><span class="
 
 # ----------------------------------------------------------------- fonts ----
 my @FONTS = (
-    ['source-serif-4-latin-wght-normal.woff2', 'Source Serif 4', 'https://cdn.jsdelivr.net/npm/@fontsource-variable/source-serif-4@5/files/source-serif-4-latin-wght-normal.woff2'],
-    ['inter-latin-wght-normal.woff2',          'Inter',          'https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5/files/inter-latin-wght-normal.woff2'],
+    ['bricolage-grotesque-latin-wght-normal.woff2', 'Bricolage Grotesque', 'https://cdn.jsdelivr.net/npm/@fontsource-variable/bricolage-grotesque@5/files/bricolage-grotesque-latin-wght-normal.woff2'],
 );
+# Remove the earlier Inter / Source Serif files if a previous run downloaded them.
+unlink glob("$res/static/css/fonts/{inter,source-serif-4}-*.woff2");
 my ($font_css, $preloads) = ('', '');
 print "\n== Phase 1: design system ==\n";
 for my $f (@FONTS) {
@@ -105,7 +106,7 @@ for my $f (@FONTS) {
         print $ok ? "  fetched font $f->[0]\n" : "  WARN could not download $f->[0]; using system fallback for $f->[1]\n";
     }
     next unless $ok;
-    $font_css .= sprintf('@font-face{font-family:"%s";font-style:normal;font-weight:100 900;font-display:swap;src:url("fonts/%s") format("woff2")}' . "\n", $f->[1], $f->[0]);
+    $font_css .= sprintf('@font-face{font-family:"%s";font-style:normal;font-weight:200 800;font-display:swap;src:url("fonts/%s") format("woff2")}' . "\n", $f->[1], $f->[0]);
     $preloads .= sprintf('    <link rel="preload" as="font" type="font/woff2" crossorigin th:href="@{/css/fonts/%s}">' . "\n", $f->[0]);
 }
 
@@ -136,15 +137,15 @@ my $TOKENS = <<'__TOKENS__';
   /* RGB triplets for translucent colours: rgb(var(--navy-950-rgb) / .1) */
   --navy-950-rgb:11 20 38;--white-rgb:255 255 255;--gold-rgb:184 145 79;
   /* Type */
-  --font-serif:"Source Serif 4",Georgia,"Times New Roman",serif;
-  --font-sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-serif:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-sans:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --step--1:clamp(.82rem,.8rem + .1vw,.875rem);
   --step-0:clamp(1rem,.97rem + .15vw,1.0625rem);
   --step-1:clamp(1.12rem,1.05rem + .35vw,1.3rem);
   --step-2:clamp(1.4rem,1.1rem + 1.2vw,1.95rem);
   --step-3:clamp(1.75rem,1.3rem + 1.8vw,2.5rem);
-  --step-4:clamp(2.5rem,1rem + 4vw,4.25rem);
+  --step-4:clamp(2.5rem,1rem + 3.4vw,4rem);
   /* Radius, shadow, layering, motion */
   --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;--r-pill:999px;
   --shadow-sm:0 1px 2px rgb(var(--navy-950-rgb) / .06),0 1px 1px rgb(var(--navy-950-rgb) / .04);
@@ -152,7 +153,7 @@ my $TOKENS = <<'__TOKENS__';
   --shadow-lg:0 28px 64px -28px rgb(var(--navy-950-rgb) / .45);
   --z-header:50;--z-toast:80;--z-dialog:90;
   --ease:cubic-bezier(.2,.7,.2,1);--dur:180ms;
-  --header-h:68px;
+  --header-h:68px;--shell-w:1440px;
   /* Lucide-style 1.5px icons used as masks (shape only) */
   --icon-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
   --icon-x:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");
@@ -177,7 +178,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2rem 0}
 .text-small{font-size:var(--step--1)}.text-muted,.lede{color:var(--ink-500)}.text-danger{color:var(--danger)}.text-success{color:var(--success-ink)}
 .mono{font-family:var(--font-mono);font-size:.86em}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.shell{width:min(1180px,100% - 2.5rem);margin-inline:auto}
+.shell{width:min(var(--shell-w),100% - 3rem);margin-inline:auto}
 .skip-link{position:absolute;left:-999px;top:.5rem;z-index:var(--z-dialog);background:var(--gold-300);color:var(--navy-950);padding:.7rem 1rem;border-radius:var(--r-sm);font-weight:600}
 .skip-link:focus{left:.75rem}
 .card,.demo,.panel,.side-panel,.alert,.dialog{--focus:var(--navy-700)}
@@ -233,7 +234,7 @@ hr{border:0;border-top:1px solid var(--line);margin:2rem 0}
 /* Page frame -------------------------------------------------------------- */
 .page-frame{flex:1}
 .page-frame:focus{outline:0}
-.page-frame>main:not(.landing){width:min(1180px,100% - 2.5rem);margin-inline:auto;padding:clamp(1.75rem,4vw,2.75rem) 0 4.5rem}
+.page-frame>main:not(.landing){width:min(var(--shell-w),100% - 3rem);margin-inline:auto;padding:clamp(1.75rem,4vw,2.75rem) 0 4.5rem}
 .page-head{margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid var(--gold-300)}
 .page-head h1{margin-bottom:.3rem}.page-head .lede{margin:0;max-width:70ch}
 .eyebrow{display:flex;align-items:center;gap:.6rem;margin:0 0 .6rem;text-transform:uppercase;letter-spacing:.14em;font-size:.75rem;font-weight:700;color:var(--navy-700)}
@@ -446,11 +447,11 @@ body:has(#exam-form) .site-menu,body:has(#exam-form) .site-footer{display:none}
 .hero-art{position:absolute;z-index:-1;top:0;right:0;width:min(68%,880px);height:100%;color:var(--gold-300);opacity:.17;pointer-events:none;-webkit-mask-image:linear-gradient(to left,var(--mask-on) 40%,var(--mask-off) 100%);mask-image:linear-gradient(to left,var(--mask-on) 40%,var(--mask-off) 100%)}
 .hero-art *{vector-effect:non-scaling-stroke}
 .hero-art text{fill:currentColor;stroke:none}
-.hero-inner{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(2rem,5vw,4.5rem);align-items:center}
+.hero-inner{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(2rem,4vw,4rem);align-items:center}
 .hero-copy>p{color:var(--on-dark-muted)}
 .hero .eyebrow{color:var(--gold-300)}.hero .eyebrow::before{background:var(--gold-300)}
-.hero h1{margin-bottom:1.25rem;color:var(--white);font-size:var(--step-4);line-height:1.05;letter-spacing:-.02em}
-.key-chip{display:inline;padding:.02em .24em;border-radius:.3em;background:var(--paper-100);color:var(--navy-950);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.hero h1{margin-bottom:1.25rem;color:var(--white);font-size:var(--step-4);line-height:1.12;letter-spacing:-.02em}
+.key-chip{display:inline;padding:0 .2em;border-radius:.3em;background:var(--paper-100);color:var(--navy-950);-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .hero .lead{max-width:56ch;font-size:var(--step-1);color:var(--on-dark-muted)}
 .hero-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.75rem 0 0}
 .hero-actions .button{min-height:52px;padding-inline:1.5rem;font-size:1rem}
@@ -470,7 +471,7 @@ body:has(#exam-form) .site-menu,body:has(#exam-form) .site-footer{display:none}
 .demo-tabs [role=tab]{min-height:44px;margin-bottom:-1px;padding:.4rem .8rem;border:0;border-bottom:2px solid transparent;background:none;font:600 .88rem var(--font-sans);color:var(--ink-500);cursor:pointer;white-space:nowrap}
 .demo-tabs [role=tab]:hover{color:var(--navy-950)}
 .demo-tabs [role=tab][aria-selected=true]{color:var(--navy-950);border-bottom-color:var(--navy-900)}
-.demo-panel{min-height:15rem;font-size:.95rem}
+.demo-panel{min-height:13rem;font-size:.95rem}
 .demo-panel p{color:var(--ink-700)}
 .demo-q{font-weight:600;color:var(--navy-950)}
 .demo-hint,.demo-note{margin:.75rem 0 0;font-size:.82rem;color:var(--ink-500)}
@@ -490,7 +491,7 @@ body:has(#exam-form) .site-menu,body:has(#exam-form) .site-footer{display:none}
 .file-types{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
 .file-types li{margin:0}
 .file-type{display:inline-block;padding:.15rem .6rem;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--paper-50);font:600 .75rem var(--font-mono);color:var(--ink-700)}
-.strip-facts{display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;margin:0 0 0 auto;padding:0;list-style:none}
+.strip-facts{display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;margin:0 0 0 auto;white-space:nowrap;padding:0;list-style:none}
 .strip-facts li{display:flex;align-items:center;gap:.5rem;margin:0;font-size:.92rem}
 .strip-facts svg{flex:none;color:var(--navy-700)}
 .landing .section{margin:0;padding:clamp(3rem,7vw,5rem) 0}
@@ -706,12 +707,12 @@ Mood: premium, scholarly, calm. A dark navy hero and sign-in area; light, airy, 
 | `static/css/app.css` | Components, written only with `var(--token)` values |
 | `static/js/shell.js` | Header scroll state, mobile menu, reveal, flashcard progress/flip, exam timer announcements |
 | `static/js/landing.js` | Landing demo tabs (arrow keys, Home/End) and flashcard flip |
-| `static/css/fonts/` | Source Serif 4 and Inter variable WOFF2, Latin subset (SIL Open Font Licence) |
+| `static/css/fonts/` | Bricolage Grotesque variable WOFF2, Latin subset (SIL Open Font Licence) |
 
 ## Rules
 - Gold is decoration on light backgrounds; gold text appears on navy only.
 - Navy primary buttons; outlined secondary; `button-light` and `button-outline-light` on navy.
-- Serif for headings and numerals; Inter for UI and body. Two families only.
+- Bricolage Grotesque for everything (one family, self-hosted).
 - Status is never colour alone: badges carry text and an icon, answers carry a label, chips carry a check.
 - Motion is 150-250ms ease-out and off under `prefers-reduced-motion`.
 - Keep existing class names and IDs: the page scripts depend on them.
