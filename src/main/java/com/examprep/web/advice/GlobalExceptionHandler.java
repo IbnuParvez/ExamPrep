@@ -6,13 +6,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.examprep.ai.exception.AiResponseException;
+import com.examprep.ai.exception.AiServiceException;
 import com.examprep.ai.exception.AiUnavailableException;
+import com.google.genai.errors.ApiException;
 import com.examprep.common.AppException;
 import com.examprep.common.ForbiddenOperationException;
 import com.examprep.common.NotFoundException;
@@ -63,6 +68,26 @@ public class GlobalExceptionHandler {
         return respond(request, status, message);
     }
 
+    /**
+     * Spring Security throws these from the service layer too, and the catch-all below used to turn them
+     * into HTTP 500 pages before ExceptionTranslationFilter could react.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public Object handleAuthentication(AuthenticationException exception, HttpServletRequest request,
+                                       HttpServletResponse response) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        response.setStatus(status.value());
+        return respond(request, status, "Please sign in to continue.");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public Object handleAccessDenied(AccessDeniedException exception, HttpServletRequest request,
+                                     HttpServletResponse response) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        response.setStatus(status.value());
+        return respond(request, status, "You do not have access to that resource.");
+    }
+
     @ExceptionHandler(Exception.class)
     public Object handleUnexpected(Exception exception, HttpServletRequest request, HttpServletResponse response) {
         log.error("Unexpected error while handling {}", request.getRequestURI(), exception);
@@ -102,6 +127,24 @@ public class GlobalExceptionHandler {
         if (exception instanceof ValidationException) {
             return HttpStatus.BAD_REQUEST;
         }
+        if (exception instanceof AiServiceException aiService) {
+            // An upstream rate limit is not the student's mistake, and neither is an upstream outage.
+            return upstreamStatus(aiService) == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_GATEWAY;
+        }
+        if (exception instanceof AiResponseException) {
+            return HttpStatus.BAD_GATEWAY;
+        }
         return HttpStatus.BAD_REQUEST;
+    }
+
+    private int upstreamStatus(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof ApiException apiFailure) {
+                return apiFailure.code();
+            }
+            current = current.getCause();
+        }
+        return -1;
     }
 }

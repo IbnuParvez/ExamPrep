@@ -1,6 +1,7 @@
 package com.examprep.ai.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,10 @@ public class StudyPackageSanitizer {
     private static final int MAX_FORMULAS = 25;
     private static final int MAX_FLASHCARDS = 60;
     private static final int MAX_QUESTIONS = 60;
+    /** A mock examination needs at least this many auto-scored (multiple-choice or true/false) questions. */
+    private static final int MIN_EXAM_ELIGIBLE_QUESTIONS = 4;
+    /** flashcards.source_ref and questions.source_ref are VARCHAR(200) in the database. */
+    private static final int MAX_SOURCE_LABEL = 200;
 
     public GeneratedStudyPackage sanitize(GeneratedStudyPackage raw, SourceReferences references,
                                           StudyPreferences preferences, String fallbackTitle) {
@@ -135,7 +140,7 @@ public class StudyPackageSanitizer {
                     continue;
                 }
                 flashcards.add(new GeneratedStudyPackage.Flashcard(front, back,
-                        references.resolveToLabel(flashcard.source())));
+                        sourceLabel(references.resolveToLabel(flashcard.source()))));
             }
         }
 
@@ -161,6 +166,15 @@ public class StudyPackageSanitizer {
             // Practice and mock examination need questions; this is not a usable study package.
             throw new AiResponseException("Gemini did not return any valid practice questions. "
                     + "Please generate the package again.");
+        }
+        long examEligible = questions.stream()
+                .filter(question -> parseType(question.type()) != QuestionType.SHORT_ANSWER)
+                .count();
+        if (examEligible < MIN_EXAM_ELIGIBLE_QUESTIONS) {
+            // startExam() refuses fewer than four auto-scored questions, so such a package would be READY
+            // yet permanently unable to run a mock examination.
+            throw new AiResponseException("Gemini returned too few multiple-choice or true/false questions "
+                    + "for a mock examination. Please generate the package again.");
         }
         return new GeneratedStudyPackage(
                 title == null ? fallbackTitle : title,
@@ -189,11 +203,27 @@ public class StudyPackageSanitizer {
         if (type == null) {
             return null;
         }
-        List<String> options = cleanList(raw.options(), 6, 500);
-        Integer correctIndex = raw.correctOptionIndex();
+        // Keep the model's option order but drop blanks and duplicates, then remap the correct index.
+        // De-duplication shifts every later position, and reusing the raw index silently stored the wrong
+        // answer ("No change" instead of "Decrease" for [Increase, Increase, Decrease, No change]).
+        List<String> rawOptions = nullSafe(raw.options());
+        List<String> options = new ArrayList<>();
+        Map<String, Integer> retainedIndexByOption = new HashMap<>();
+        for (int index = 0; index < rawOptions.size() && options.size() < 6; index++) {
+            String option = clean(rawOptions.get(index), 500);
+            if (option == null) {
+                continue;
+            }
+            String key = option.toLowerCase(Locale.ROOT);
+            if (retainedIndexByOption.containsKey(key)) {
+                continue;
+            }
+            retainedIndexByOption.put(key, options.size());
+            options.add(option);
+        }
+        Integer correctIndex = remapOptionIndex(raw.correctOptionIndex(), rawOptions, retainedIndexByOption);
         Boolean correctBoolean = raw.correctAnswer();
         String suggestedAnswer = clean(raw.suggestedAnswer(), 3000);
-
         switch (type) {
             case MULTIPLE_CHOICE -> {
                 if (options.size() < 2) {
@@ -227,9 +257,27 @@ public class StudyPackageSanitizer {
         }
         Difficulty difficulty = parseDifficulty(raw.difficulty());
         String explanation = clean(raw.explanation(), 3000);
-        String source = references.resolveToLabel(raw.source());
+        String source = sourceLabel(references.resolveToLabel(raw.source()));
         return new GeneratedStudyPackage.Question(type.name(), text, options, correctIndex, correctBoolean,
                 suggestedAnswer, explanation == null ? "" : explanation, difficulty.name(), source);
+    }
+
+    /** Maps the model's original option index onto the de-duplicated option list. */
+    private static Integer remapOptionIndex(Integer rawIndex, List<String> rawOptions,
+                                            Map<String, Integer> retainedIndexByOption) {
+        if (rawIndex == null || rawIndex < 0 || rawIndex >= rawOptions.size()) {
+            return null;
+        }
+        String chosen = clean(rawOptions.get(rawIndex), 500);
+        return chosen == null ? null : retainedIndexByOption.get(chosen.toLowerCase(Locale.ROOT));
+    }
+
+    /** Citation labels list every resolved location, which can exceed the stored column width. */
+    private static String sourceLabel(String label) {
+        if (label == null) {
+            return null;
+        }
+        return label.length() <= MAX_SOURCE_LABEL ? label : label.substring(0, MAX_SOURCE_LABEL).strip();
     }
 
     static QuestionType parseType(String value) {

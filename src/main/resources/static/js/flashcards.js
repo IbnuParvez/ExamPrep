@@ -139,10 +139,10 @@
             event.preventDefault();
             previous();
         } else if (event.key === " " || event.key === "Enter") {
-            if (event.target === document.body) {
-                event.preventDefault();
-                reveal();
-            }
+            // After clicking Next with the mouse, focus stays on that button, so "target === body" was
+            // false and Space/Enter skipped to the next card instead of revealing the answer.
+            event.preventDefault();
+            reveal();
         }
     });
 

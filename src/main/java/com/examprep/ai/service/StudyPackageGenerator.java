@@ -30,6 +30,9 @@ public class StudyPackageGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(StudyPackageGenerator.class);
 
+    /** How much of an unusable previous answer is shown to the model when asking for a repair. */
+    private static final int REPAIR_PREVIEW_CHARS = 8_000;
+
     private final GeminiGateway gateway;
     private final StudyPackageSanitizer sanitizer;
     private final ObjectMapper objectMapper;
@@ -50,7 +53,9 @@ public class StudyPackageGenerator {
             throw new AiResponseException("The document does not contain any extracted text to study.");
         }
         SourceReferences references = SourceReferences.from(chunks);
-        List<DocumentChunk> promptChunks = takeWithinBudget(chunks, properties.getMaxSourceChars());
+        // Excerpts are sampled across the whole document, not just its first pages: the segment analysis
+        // covers every chunk, and the system prompt forbids using facts outside the supplied excerpts.
+        List<DocumentChunk> promptChunks = selectAcrossDocument(chunks, properties.getMaxSourceChars());
 
         String analysis = "";
         if (context.totalChars() > properties.getMaxSourceChars()) {
@@ -61,12 +66,31 @@ public class StudyPackageGenerator {
         reporter.report("Drafting summaries, revision notes and questions", 65);
         String prompt = Prompts.studyPackagePrompt(context.title(), preferences,
                 Prompts.renderSources(promptChunks), analysis);
-        String raw = generateJsonWithRepair(Prompts.SYSTEM_INSTRUCTION, prompt);
-        GeneratedStudyPackage parsed = parse(raw, GeneratedStudyPackage.class);
-        GeneratedStudyPackage sanitized = sanitizer.sanitize(parsed, references, preferences, context.title());
+        GeneratedStudyPackage sanitized = generatePackage(prompt, references, preferences, context.title());
         log.info("Generated study package with {} topics, {} flashcards and {} questions",
                 sanitized.topics().size(), sanitized.flashcards().size(), sanitized.questions().size());
         return sanitized;
+    }
+
+    /**
+     * Requests the study package and repairs it exactly once if the result cannot be used. A repair is
+     * also triggered when the JSON parses but the sanitizer rejects it, which used to fail the whole
+     * job even though the model could have fixed its own output.
+     */
+    private GeneratedStudyPackage generatePackage(String prompt, SourceReferences references,
+                                                  StudyPreferences preferences, String fallbackTitle) {
+        String raw = gateway.generate(GeminiPrompt.json(Prompts.SYSTEM_INSTRUCTION, prompt,
+                properties.getMaxOutputTokens()));
+        try {
+            return sanitizer.sanitize(parse(raw, GeneratedStudyPackage.class), references, preferences, fallbackTitle);
+        } catch (AiResponseException unusable) {
+            log.warn("Gemini returned study material that could not be used ({}); requesting one repair",
+                    unusable.getMessage());
+            String repaired = gateway.generate(GeminiPrompt.json(Prompts.SYSTEM_INSTRUCTION,
+                    repairPrompt(raw, unusable.getMessage()), properties.getMaxOutputTokens()));
+            return sanitizer.sanitize(parse(repaired, GeneratedStudyPackage.class), references, preferences,
+                    fallbackTitle);
+        }
     }
 
     private String analyseInSegments(DocumentContext context, ProgressReporter reporter) {
@@ -77,8 +101,7 @@ public class StudyPackageGenerator {
             reporter.report("Analysing section " + (index + 1) + " of " + segments.size(),
                     20 + (int) (35.0 * index / Math.max(1, segments.size())));
             String prompt = Prompts.segmentAnalysisPrompt(context.title(), Prompts.renderSources(segment));
-            String raw = generateJsonWithRepair(Prompts.SYSTEM_INSTRUCTION, prompt);
-            SegmentAnalysis analysis = parse(raw, SegmentAnalysis.class);
+            SegmentAnalysis analysis = generateJson(Prompts.SYSTEM_INSTRUCTION, prompt, SegmentAnalysis.class);
             combined.append("- Section ").append(index + 1).append(": ")
                     .append(analysis.summary() == null ? "" : analysis.summary().strip()).append('\n');
             if (analysis.keyPoints() != null) {
@@ -115,42 +138,75 @@ public class StudyPackageGenerator {
         return segments;
     }
 
-    private List<DocumentChunk> takeWithinBudget(List<DocumentChunk> chunks, int maxChars) {
+    /**
+     * Selects excerpts across the entire document within the character budget. Taking only the first
+     * chunks used to starve the back half of any document longer than the budget.
+     */
+    static List<DocumentChunk> selectAcrossDocument(List<DocumentChunk> chunks, int maxChars) {
+        int total = 0;
+        for (DocumentChunk chunk : chunks) {
+            total += chunk.text().length();
+        }
+        if (total <= maxChars) {
+            return new ArrayList<>(chunks);
+        }
+        int stride = Math.max(1, (int) Math.ceil((double) total / Math.max(1, maxChars)));
         List<DocumentChunk> selected = new ArrayList<>();
         int used = 0;
-        for (DocumentChunk chunk : chunks) {
-            if (!selected.isEmpty() && used + chunk.text().length() > maxChars) {
-                break;
+        for (int index = 0; index < chunks.size(); index += stride) {
+            DocumentChunk chunk = chunks.get(index);
+            int size = chunk.text().length();
+            if (used + size > maxChars) {
+                continue;
             }
             selected.add(chunk);
-            used += chunk.text().length();
+            used += size;
+        }
+        if (selected.isEmpty()) {
+            selected.add(chunks.get(0));
         }
         return selected;
     }
 
-    /**
-     * Requests JSON and repairs a malformed response exactly once. Raw prompts and completions are
-     * never logged.
-     */
-    private String generateJsonWithRepair(String systemInstruction, String prompt) {
+    /** Requests JSON and repairs a malformed response exactly once. Raw completions are never logged. */
+    private <T> T generateJson(String systemInstruction, String prompt, Class<T> type) {
         String raw = gateway.generate(GeminiPrompt.json(systemInstruction, prompt, properties.getMaxOutputTokens()));
         try {
-            parse(raw, com.fasterxml.jackson.databind.JsonNode.class);
-            return raw;
+            return parse(raw, type);
         } catch (AiResponseException firstFailure) {
             log.warn("Gemini returned malformed JSON; requesting one repair attempt");
-            String repair = """
-                    Your previous output could not be parsed as the required JSON object.
-                    Return ONLY a corrected JSON object for the original task, with no markdown fences or commentary.
-
-                    Previous output:
-                    %s
-
-                    Original task:
-                    %s
-                    """.formatted(truncate(raw, 8000), prompt);
-            return gateway.generate(GeminiPrompt.json(systemInstruction, repair, properties.getMaxOutputTokens()));
+            String repaired = gateway.generate(GeminiPrompt.json(systemInstruction,
+                    repairPrompt(raw, "the response was not a valid JSON object"), properties.getMaxOutputTokens()));
+            return parse(repaired, type);
         }
+    }
+
+    /**
+     * Asks the model to fix its own output. The original (potentially huge) source prompt is deliberately
+     * not resent: the previous answer already contains the material, and resending the sources doubled
+     * token usage for the same output-token ceiling.
+     */
+    private static String repairPrompt(String previousOutput, String reason) {
+        return """
+                Your previous output could not be used: %s
+
+                Return ONLY a corrected JSON object for the same request, with no markdown fences and no
+                commentary. Reuse the material already present in your previous output and do not add facts
+                that were not in it.
+
+                For a study package the object needs these keys: title, introduction, summary,
+                learningObjectives, keyAreasToRevise, topics[], revisionSections[], definitions[], formulas[],
+                flashcards[], questions[]. Every question needs type (MULTIPLE_CHOICE, TRUE_FALSE or
+                SHORT_ANSWER), question, options (empty for TRUE_FALSE and SHORT_ANSWER), correctOptionIndex
+                (multiple choice, 0-based into options), correctAnswer (true/false only), suggestedAnswer
+                (short answer only), explanation, difficulty and source. Include at least four
+                MULTIPLE_CHOICE or TRUE_FALSE questions and never repeat the same option text.
+
+                For a section analysis the object needs: summary, keyPoints[], topics[].
+
+                Previous output:
+                %s
+                """.formatted(reason, truncate(previousOutput, REPAIR_PREVIEW_CHARS));
     }
 
     private <T> T parse(String raw, Class<T> type) {

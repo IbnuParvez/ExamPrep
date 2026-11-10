@@ -9,12 +9,12 @@ Mood: premium, scholarly, calm. A dark navy hero and sign-in area; light, airy, 
 | `static/css/app.css` | Components, written only with `var(--token)` values |
 | `static/js/shell.js` | Header scroll state, mobile menu, reveal, flashcard progress/flip, exam timer announcements |
 | `static/js/landing.js` | Landing demo tabs (arrow keys, Home/End) and flashcard flip |
-| `static/css/fonts/` | Source Serif 4 and Inter variable WOFF2, Latin subset (SIL Open Font Licence) |
+| `static/css/fonts/` | Bricolage Grotesque variable WOFF2, Latin subset (SIL Open Font Licence) |
 
 ## Rules
 - Gold is decoration on light backgrounds; gold text appears on navy only.
 - Navy primary buttons; outlined secondary; `button-light` and `button-outline-light` on navy.
-- Serif for headings and numerals; Inter for UI and body. Two families only.
+- Bricolage Grotesque for everything (one family, self-hosted).
 - Status is never colour alone: badges carry text and an icon, answers carry a label, chips carry a check.
 - Motion is 150-250ms ease-out and off under `prefers-reduced-motion`.
 - Keep existing class names and IDs: the page scripts depend on them.

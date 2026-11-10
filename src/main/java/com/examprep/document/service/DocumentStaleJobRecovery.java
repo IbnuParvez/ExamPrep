@@ -37,7 +37,18 @@ public class DocumentStaleJobRecovery implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        recover();
+        // Extraction runs on an in-memory executor, so a restart kills every in-progress document.
+        // Recovering them immediately avoids status pages that spin until the stale window elapses.
+        recoverAll();
+    }
+
+    private void recoverAll() {
+        int recovered = documentRepository.markStaleJobsFailed(DocumentStatus.FAILED,
+                List.of(DocumentStatus.UPLOADED, DocumentStatus.PROCESSING), Instant.now(), REASON,
+                Instant.now());
+        if (recovered > 0) {
+            log.warn("Recovered {} interrupted document job(s) on startup", recovered);
+        }
     }
 
     @Scheduled(fixedDelay = 15 * 60 * 1000L, initialDelay = 5 * 60 * 1000L)

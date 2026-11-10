@@ -79,8 +79,11 @@ public class AuthController {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
-        request.getSession(true).setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        // Rotate the session id before storing the authenticated context, so a session id fixed before
+        // sign-in cannot be reused by an attacker (the form-login filter already does this).
+        jakarta.servlet.http.HttpSession session = request.getSession(true);
+        request.changeSessionId();
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
     }
 
     private boolean isSignedIn(Authentication authentication) {

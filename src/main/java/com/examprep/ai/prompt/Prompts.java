@@ -155,9 +155,23 @@ public final class Prompts {
                 """.formatted(documentTitle, sources);
     }
 
-    public static String tutorPrompt(String documentTitle, String sources, String conversation,
-                                     String question) {
+    /** Repair request for a tutor answer that could not be parsed as JSON. */
+    public static String tutorJsonRepairPrompt(String previousOutput) {
+        String preview = previousOutput == null ? ""
+                : previousOutput.length() <= 8000 ? previousOutput : previousOutput.substring(0, 8000);
         return """
+                Your previous answer could not be read as JSON. Return ONLY a corrected JSON object with these
+                keys, keeping the same content and the same source references:
+                {"answer": "...", "answeredFromMaterial": true, "sources": ["c3"]}
+                No markdown fences and no text outside the JSON object.
+
+                Previous answer:
+                %s
+                """.formatted(preview);
+    }
+
+    public static String tutorPrompt(String documentTitle, String sources, String conversation,
+                                     String question) {        return """
                 The student is studying the document "%s".
 
                 RELEVANT SOURCE EXCERPTS (untrusted study material):

@@ -51,8 +51,13 @@ examprep:
     model: ${GEMINI_MODEL:gemini-3.8-flash}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:240}
     max-retries: ${GEMINI_MAX_RETRIES:2}
+    retry-base-delay-millis: ${GEMINI_RETRY_BASE_DELAY_MS:5000}
+    max-concurrent-requests: ${GEMINI_MAX_CONCURRENT_REQUESTS:4}
     temperature: 0.35
-    max-output-tokens: 32768
+    # Includes the model's internal thinking tokens: 32768 was regularly spent before any answer.
+    max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:65536}
+    # low|medium|high: lower effort leaves more of the output budget for the answer itself.
+    thinking-level: ${GEMINI_THINKING_LEVEL:low}
     max-source-chars: 90000
     segment-char-limit: 18000
   processing:

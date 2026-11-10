@@ -76,7 +76,14 @@ public class ExamController {
                          @RequestParam(name = "timeTaken", defaultValue = "0") int timeTaken,
                          HttpServletRequest request, RedirectAttributes redirectAttributes) {
         UUID ownerId = currentUserService.requireCurrentUserId();
-        ExamSessionDto session = studyPackService.getExamSession(attemptId, ownerId);
+        ExamSessionDto session;
+        try {
+            session = studyPackService.getExamSession(attemptId, ownerId);
+        } catch (ValidationException alreadySubmitted) {
+            // A double-click, or the countdown racing a manual click: the attempt is already graded, so
+            // send the student to the results instead of showing a 400 error page.
+            return "redirect:/exam/" + attemptId + "/results";
+        }
         List<QuizSubmissionDto.Answer> answers = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
             String name = entry.getKey();

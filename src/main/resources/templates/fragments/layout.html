@@ -32,11 +32,23 @@
             <span>ExamPrep</span>
         </a>
 
+<<<<<<< HEAD
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
             <span class="sr-only">Menu</span>
             <svg class="i-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg class="i-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
+=======
+        <nav class="site-nav" aria-label="Primary">
+            <th:block sec:authorize="isAuthenticated()">
+                <a th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? 'is-active'">Dashboard</a>
+                <a th:href="@{/documents}" th:classappend="${activeNav == 'documents'} ? 'is-active'">Documents</a>
+                <a th:href="@{/documents/upload}" th:classappend="${activeNav == 'upload'} ? 'is-active'">Upload</a>
+            </th:block>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/#how-it-works}">How it works</a>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/privacy}">Privacy</a>
+        </nav>
+>>>>>>> origin/freebuff/24c2b4c625fe2db24f860d24
 
         <div class="site-menu" id="site-menu">
             <nav class="site-nav" aria-label="Primary">

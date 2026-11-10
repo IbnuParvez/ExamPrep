@@ -28,9 +28,13 @@ public class DocumentValidator {
     /** Extension to acceptable detected media types. */
     private static final Map<String, Set<String>> ALLOWED = Map.of(
             "pdf", Set.of("application/pdf"),
-            "docx", Set.of("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            // Tika reports some OOXML containers generically; without this, valid DOCX/PPTX files were
+            // rejected as "content does not match its extension".
+            "docx", Set.of("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/x-tika-ooxml"),
             "doc", Set.of("application/msword", "application/x-tika-msoffice"),
-            "pptx", Set.of("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+            "pptx", Set.of("application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/x-tika-ooxml"),
             "ppt", Set.of("application/vnd.ms-powerpoint", "application/x-tika-msoffice"),
             "txt", Set.of("text/plain"),
             "md", Set.of("text/plain", "text/markdown", "text/x-web-markdown"),
@@ -71,7 +75,7 @@ public class DocumentValidator {
             throw new ValidationException("This file is too large. The maximum size is "
                     + properties.getMaxFileSizeMb() + " MB.");
         }
-        String detected = detect(file);
+        String detected = detect(file, cleanedName);
         boolean accepted = acceptedTypes.contains(detected)
                 || (TEXT_EXTENSIONS.contains(extension) && detected.startsWith("text/"));
         if (!accepted) {
@@ -82,9 +86,11 @@ public class DocumentValidator {
         return new ValidatedUpload(cleanedName, extension, detected, file.getSize());
     }
 
-    private String detect(MultipartFile file) {
+    private String detect(MultipartFile file, String filename) {
         try (InputStream inputStream = file.getInputStream()) {
-            String detected = tika.detect(inputStream);
+            // The filename hint lets Tika recognise Markdown, LaTeX or shell notes that start with JSON,
+            // XML or a \documentclass and would otherwise be detected as a non-text type.
+            String detected = tika.detect(inputStream, filename);
             if (detected == null || detected.isBlank()) {
                 throw new ValidationException("The file type could not be determined.");
             }

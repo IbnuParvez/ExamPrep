@@ -98,8 +98,10 @@ public class DocumentApplicationServiceImpl implements DocumentApplicationServic
     @Override
     public void retryExtraction(UUID documentId, UUID ownerId) {
         Document document = requireOwned(documentId, ownerId);
-        if (document.getStatus() == DocumentStatus.PROCESSING) {
-            throw new ValidationException("This document is already being processed.");
+        // Retrying a PROCESSING or UPLOADED document queued a second concurrent extraction that collided
+        // on the chunk unique index; retrying a READY one rewrote chunks underneath existing study packs.
+        if (document.getStatus() != DocumentStatus.FAILED) {
+            throw new ValidationException("Only a document that failed processing can be retried.");
         }
         document.resetForRetry();
         documentRepository.saveAndFlush(document);

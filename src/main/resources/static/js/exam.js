@@ -11,7 +11,11 @@
     const answeredCounter = document.getElementById("answered-count");
     const questions = Array.prototype.slice.call(document.querySelectorAll(".exam-question"));
     const chips = Array.prototype.slice.call(document.querySelectorAll(".question-chip"));
-    let remaining = Number(form.getAttribute("data-remaining") || 0);
+    const initialRemaining = Math.max(0, Number(form.getAttribute("data-remaining") || 0));
+    // Count down from a wall-clock deadline: a plain decrement in setInterval drifts badly while the
+    // tab is backgrounded, so students gained or lost time depending on device throttling.
+    const deadline = Date.now() + initialRemaining * 1000;
+    let remaining = initialRemaining;
     let submitted = false;
 
     function pad(value) {
@@ -56,13 +60,12 @@
         if (submitted) {
             return;
         }
-        remaining -= 1;
+        remaining = Math.max(0, Math.round((deadline - Date.now()) / 1000));
         if (remaining <= 0) {
-            remaining = 0;
             renderTimer();
             submitted = true;
             if (timeTakenInput) {
-                timeTakenInput.value = String(Number(form.getAttribute("data-remaining") || 0));
+                timeTakenInput.value = String(initialRemaining);
             }
             window.alert("Time is up. Your examination will now be submitted with the answers selected so far.");
             form.submit();
@@ -105,7 +108,8 @@
         }
         submitted = true;
         if (timeTakenInput) {
-            timeTakenInput.value = String(Math.max(0, Number(form.getAttribute("data-remaining") || 0) - remaining));
+            // Informational only: the server recomputes the duration from the attempt's startedAt.
+            timeTakenInput.value = String(Math.max(0, initialRemaining - remaining));
         }
     });
 

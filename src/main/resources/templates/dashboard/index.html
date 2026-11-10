@@ -166,7 +166,7 @@
                     <tbody>
                     <tr th:each="attempt : ${attempts}">
                         <td class="cell-title">
-                            <a th:href="@{/study/{id}(id=${attempt.studyPackId})}"
+                            <a th:href="@{/exam/{id}/results(id=${attempt.id})}"
                                th:text="${attempt.studyPackTitle}">Study package</a>
                         </td>
                         <td class="numeric">

@@ -13,6 +13,7 @@ import com.examprep.api.dto.StudyPackDto;
 import com.examprep.api.dto.StudyPackStatusDto;
 import com.examprep.api.dto.StudyPackSummaryDto;
 import com.examprep.api.dto.StudyPreferences;
+import com.examprep.api.dto.StudyStatsDto;
 import com.examprep.api.dto.TutorAnswerDto;
 import com.examprep.api.dto.TutorMessageDto;
 import com.examprep.api.dto.TutorQuestionDto;
@@ -30,6 +31,9 @@ public interface StudyPackApplicationService {
 
     void delete(UUID studyPackId, UUID ownerId);
 
+    /** Re-runs generation for a failed package, reusing the preferences stored on it. */
+    StudyPackStatusDto retry(UUID studyPackId, UUID ownerId);
+
     ExamSessionDto startExam(UUID studyPackId, UUID ownerId);
 
     ExamSessionDto getExamSession(UUID attemptId, UUID ownerId);
@@ -39,6 +43,9 @@ public interface StudyPackApplicationService {
     QuizResultDto getResult(UUID attemptId, UUID ownerId);
 
     List<QuizAttemptSummaryDto> recentAttempts(UUID ownerId, int limit);
+
+    /** Attempt count, best score and average score across all submitted attempts. */
+    StudyStatsDto statistics(UUID ownerId);
 
     PracticeAnswerDto revealPracticeAnswer(UUID studyPackId, UUID questionId, UUID ownerId);
 

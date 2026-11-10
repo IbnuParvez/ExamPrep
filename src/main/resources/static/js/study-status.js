@@ -14,6 +14,12 @@
     let timer = null;
     let finished = false;
 
+    const initialStatus = panel.getAttribute("data-status");
+    if (initialStatus === "FAILED" || initialStatus === "READY") {
+        // The server already rendered this state, including its retry and delete actions.
+        return;
+    }
+
     function stop() {
         if (timer) {
             window.clearInterval(timer);
@@ -43,19 +49,9 @@
             if (status.status === "FAILED") {
                 finished = true;
                 stop();
-                if (title) {
-                    title.textContent = "Generation did not finish";
-                }
-                if (message) {
-                    message.textContent = "The package could not be generated.";
-                }
-                if (errorLive) {
-                    errorLive.textContent = status.errorMessage || "Generation failed. Please try again.";
-                    errorLive.hidden = false;
-                }
-                if (bar && bar.parentElement) {
-                    bar.parentElement.hidden = true;
-                }
+                // Reload so the server renders the failed state, including the "Generate again" and
+                // "Delete package" actions that only exist in the Thymeleaf template.
+                window.location.reload();
                 return;
             }
             if (bar) {
