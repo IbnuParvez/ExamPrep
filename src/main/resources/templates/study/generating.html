@@ -33,6 +33,9 @@
         </p>
 
         <div class="button-row" style="justify-content:center;margin-top:1.5rem">
+            <form th:if="${status.failed()}" th:action="@{/study/{id}/retry(id=${pack.id})}" method="post">
+                <button class="button button-primary" type="submit">Generate again</button>
+            </form>
             <a class="button button-secondary" th:href="@{/study/{id}(id=${pack.id})}">Refresh status</a>
             <a class="button button-ghost" th:href="@{/dashboard}">Back to dashboard</a>
         </div>

@@ -49,6 +49,11 @@
 
     form.addEventListener("submit", async function (event) {
         event.preventDefault();
+        // Enter also dispatches a synthetic submit event; without this guard an impatient student could
+        // fire overlapping tutor requests while the first one was still running.
+        if (submit.disabled) {
+            return;
+        }
         const message = input.value.trim();
         if (!message) {
             return;
@@ -72,6 +77,10 @@
         } catch (error) {
             window.ExamPrep.toast(error.message, true);
             appendMessage("assistant", "I could not answer that just now. " + error.message, []);
+            // Give the student their question back instead of silently losing what they typed.
+            if (!input.value) {
+                input.value = message;
+            }
         } finally {
             submit.disabled = false;
             if (typing) {
@@ -84,7 +93,9 @@
     input.addEventListener("keydown", function (event) {
         if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
-            form.dispatchEvent(new Event("submit", { cancelable: true }));
+            if (!submit.disabled) {
+                form.dispatchEvent(new Event("submit", { cancelable: true }));
+            }
         }
     });
 

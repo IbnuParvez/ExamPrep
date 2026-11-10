@@ -68,7 +68,16 @@ public class TutorService {
         String prompt = Prompts.tutorPrompt(context.title(), Prompts.renderSources(retrieved), conversation, question);
         String raw = gateway.generate(GeminiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION, prompt,
                 Math.min(properties.getMaxOutputTokens(), 16384)));
-        TutorModelResponse response = parse(raw);
+        TutorModelResponse response;
+        try {
+            response = parse(raw);
+        } catch (AiResponseException unreadable) {
+            // One repair attempt: the model can usually reformat its own answer, and without this the
+            // student saw a failure for a purely syntactic problem.
+            log.warn("Tutor response could not be parsed; requesting one repair attempt");
+            response = parse(gateway.generate(GeminiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION,
+                    Prompts.tutorJsonRepairPrompt(raw), Math.min(properties.getMaxOutputTokens(), 16384))));
+        }
         String answer = response.answer() == null ? "" : response.answer().strip();
         if (answer.isBlank()) {
             throw new AiResponseException("The tutor did not return an answer. Please try again.");
@@ -90,7 +99,14 @@ public class TutorService {
     }
 
     private TutorModelResponse parse(String raw) {
-        String candidate = raw.strip();
+        String candidate = raw == null ? "" : raw.strip();
+        if (candidate.startsWith("```")) {
+            int firstNewline = candidate.indexOf('\n');
+            int lastFence = candidate.lastIndexOf("```");
+            if (firstNewline > 0 && lastFence > firstNewline) {
+                candidate = candidate.substring(firstNewline + 1, lastFence).strip();
+            }
+        }
         int start = candidate.indexOf('{');
         int end = candidate.lastIndexOf('}');
         if (start < 0 || end <= start) {

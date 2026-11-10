@@ -15,6 +15,8 @@ public class AiProperties {
     private int maxRetries = 2;
     /** Base delay before retrying a transient failure; doubled on every further attempt. */
     private int retryBaseDelayMillis = 5_000;
+    /** Maximum simultaneous Gemini requests; protects the shared API key quota. */
+    private int maxConcurrentRequests = 4;
     private double temperature = 0.35;
     /**
      * Ceiling for a single answer, including the model's internal thinking tokens. gemini-3.8-flash
@@ -73,6 +75,14 @@ public class AiProperties {
 
     public void setRetryBaseDelayMillis(int retryBaseDelayMillis) {
         this.retryBaseDelayMillis = retryBaseDelayMillis;
+    }
+
+    public int getMaxConcurrentRequests() {
+        return maxConcurrentRequests;
+    }
+
+    public void setMaxConcurrentRequests(int maxConcurrentRequests) {
+        this.maxConcurrentRequests = maxConcurrentRequests;
     }
 
     public double getTemperature() {

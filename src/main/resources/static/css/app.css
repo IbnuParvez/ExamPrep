@@ -471,7 +471,8 @@ hr {
 
 .steps {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Four step cards (01-04): three columns pushed step 04 onto a lonely second row. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.5rem;
     counter-reset: step;
 }

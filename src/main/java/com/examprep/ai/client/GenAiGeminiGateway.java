@@ -2,7 +2,9 @@ package com.examprep.ai.client;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,17 +46,41 @@ public class GenAiGeminiGateway implements GeminiGateway {
 
     private final GeminiClientFactory clientFactory;
     private final AiProperties properties;
+    /** One shared key: never let generation jobs and tutor requests burst past the configured limit. */
+    private final Semaphore inFlight;
 
     public GenAiGeminiGateway(GeminiClientFactory clientFactory, AiProperties properties) {
         this.clientFactory = clientFactory;
         this.properties = properties;
+        // Fair, so a burst of tutor requests cannot starve a queued generation job.
+        this.inFlight = new Semaphore(Math.max(1, properties.getMaxConcurrentRequests()), true);
     }
 
     @Override
     public String generate(GeminiPrompt prompt) {
         Client client = clientFactory.client();
         GenerateContentConfig config = buildConfig(prompt);
+        acquirePermit();
+        try {
+            return generateWithRetries(client, prompt, config);
+        } finally {
+            inFlight.release();
+        }
+    }
 
+    private void acquirePermit() {
+        try {
+            if (!inFlight.tryAcquire(Math.max(10, properties.getTimeoutSeconds()), TimeUnit.SECONDS)) {
+                throw new AiServiceException("The AI service is busy with other requests. "
+                        + "Please try again in a moment.");
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new AiServiceException("The AI request was interrupted. Please try again.", interrupted);
+        }
+    }
+
+    private String generateWithRetries(Client client, GeminiPrompt prompt, GenerateContentConfig config) {
         int attempts = Math.max(1, properties.getMaxRetries() + 1);
         long budgetMillis = perAttemptTimeoutMillis();
         long deadlineNanos = System.nanoTime() + budgetMillis * 1_000_000L;

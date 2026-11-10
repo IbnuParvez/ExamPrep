@@ -2,6 +2,7 @@ package com.examprep.user.service;
 
 import java.util.Locale;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,14 @@ public class UserRegistrationServiceImpl implements UserRegistrationService {
                 request.fullName().trim(),
                 email,
                 passwordEncoder.encode(request.password()));
-        repository.save(account);
+        try {
+            repository.saveAndFlush(account);
+        } catch (DataIntegrityViolationException violation) {
+            // Two simultaneous registrations can both pass the existsByEmail check; the unique index is
+            // the authority, and the student deserves a form error rather than an HTTP 500 page.
+            throw new ValidationException(
+                    "An account with this email address already exists. Try signing in instead.");
+        }
         return new UserAccountDto(account.getId(), account.getFullName(), account.getEmail());
     }
 }

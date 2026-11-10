@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.examprep.ai.dto.GeneratedStudyPackage;
 import com.examprep.ai.exception.AiResponseException;
@@ -45,16 +47,19 @@ public class StudyGenerationService {
     private final DocumentApplicationService documentService;
     private final StudyPackageGenerator generator;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     public StudyGenerationService(StudyPackRepository studyPackRepository, FlashcardRepository flashcardRepository,
                                   QuestionRepository questionRepository, DocumentApplicationService documentService,
-                                  StudyPackageGenerator generator, ObjectMapper objectMapper) {
+                                  StudyPackageGenerator generator, ObjectMapper objectMapper,
+                                  PlatformTransactionManager transactionManager) {
         this.studyPackRepository = studyPackRepository;
         this.flashcardRepository = flashcardRepository;
         this.questionRepository = questionRepository;
         this.documentService = documentService;
         this.generator = generator;
         this.objectMapper = objectMapper;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Async(AsyncConfig.STUDY_EXECUTOR)
@@ -80,30 +85,7 @@ public class StudyGenerationService {
                 studyPackRepository.save(pack);
             });
 
-            persistQuestionsAndFlashcards(pack, generated);
-            StudyPackageContent content = new StudyPackageContent(
-                    generated.topics().stream()
-                            .map(topic -> new StudyPackDto.Topic(topic.name(), topic.explanation(),
-                                    topic.keyConcepts(), topic.sources()))
-                            .toList(),
-                    generated.revisionSections().stream()
-                            .map(section -> new StudyPackDto.RevisionSection(section.heading(), section.body(),
-                                    section.sources()))
-                            .toList(),
-                    generated.definitions().stream()
-                            .map(definition -> new StudyPackDto.Definition(definition.term(),
-                                    definition.definition(), definition.source()))
-                            .toList(),
-                    generated.formulas().stream()
-                            .map(formula -> new StudyPackDto.Formula(formula.name(), formula.expression(),
-                                    formula.explanation(), formula.source()))
-                            .toList());
-            Map<String, Object> contentMap = objectMapper.convertValue(content, new TypeReference<>() {
-            });
-            pack.applyGeneratedContent(generated.title(), generated.introduction(), generated.summary(),
-                    generated.learningObjectives(), generated.keyAreasToRevise(), contentMap);
-            pack.markReady();
-            studyPackRepository.save(pack);
+            saveGeneratedPackage(pack, generated);
             log.info("Study package {} is ready", studyPackId);
         } catch (AppException exception) {
             log.warn("Study generation failed for package {}: {}", studyPackId, exception.getMessage());
@@ -112,6 +94,49 @@ public class StudyGenerationService {
             log.warn("Study generation failed unexpectedly for package {}", studyPackId, exception);
             fail(pack, "We could not generate this study package. Please try again.");
         }
+    }
+
+    /**
+     * Persists questions, flashcards, package content and the READY status in one transaction. These used
+     * to be five separate auto-committed saves, so a failure part-way left flashcards and questions
+     * attached to a package that had been marked FAILED.
+     */
+    private void saveGeneratedPackage(StudyPack pack, GeneratedStudyPackage generated) {
+        transactionTemplate.executeWithoutResult(status -> {
+            StudyPack current = studyPackRepository.findById(pack.getId()).orElse(null);
+            if (current == null) {
+                // The package was deleted while the model was working; never resurrect it.
+                return;
+            }
+            persistQuestionsAndFlashcards(current, generated);
+            Map<String, Object> contentMap = objectMapper.convertValue(buildContent(generated),
+                    new TypeReference<>() {
+                    });
+            current.applyGeneratedContent(generated.title(), generated.introduction(), generated.summary(),
+                    generated.learningObjectives(), generated.keyAreasToRevise(), contentMap);
+            current.markReady();
+            studyPackRepository.save(current);
+        });
+    }
+
+    private StudyPackageContent buildContent(GeneratedStudyPackage generated) {
+        return new StudyPackageContent(
+                generated.topics().stream()
+                        .map(topic -> new StudyPackDto.Topic(topic.name(), topic.explanation(),
+                                topic.keyConcepts(), topic.sources()))
+                        .toList(),
+                generated.revisionSections().stream()
+                        .map(section -> new StudyPackDto.RevisionSection(section.heading(), section.body(),
+                                section.sources()))
+                        .toList(),
+                generated.definitions().stream()
+                        .map(definition -> new StudyPackDto.Definition(definition.term(),
+                                definition.definition(), definition.source()))
+                        .toList(),
+                generated.formulas().stream()
+                        .map(formula -> new StudyPackDto.Formula(formula.name(), formula.expression(),
+                                formula.explanation(), formula.source()))
+                        .toList());
     }
 
     private void persistQuestionsAndFlashcards(StudyPack pack, GeneratedStudyPackage generated) {

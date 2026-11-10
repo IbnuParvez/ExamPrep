@@ -24,7 +24,7 @@ public class StudyStaleJobRecovery implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(StudyStaleJobRecovery.class);
     private static final String REASON = "Generation was interrupted before it finished. "
-            + "Delete this package and generate it again.";
+            + "Use Generate again to retry.";
 
     private final StudyPackRepository repository;
     private final ProcessingProperties properties;
@@ -36,7 +36,19 @@ public class StudyStaleJobRecovery implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        recover();
+        // Async execution is in-memory, so no generation job can still be running when the application
+        // starts: every in-progress row is dead. Waiting for the stale window left jobs spinning for up
+        // to 75 minutes after a restart or deploy.
+        recoverAll();
+    }
+
+    private void recoverAll() {
+        int recovered = repository.markStaleJobsFailed(StudyPackStatus.FAILED,
+                List.of(StudyPackStatus.QUEUED, StudyPackStatus.PROCESSING), Instant.now(), REASON,
+                Instant.now());
+        if (recovered > 0) {
+            log.warn("Recovered {} interrupted study generation job(s) on startup", recovered);
+        }
     }
 
     @Scheduled(fixedDelay = 15 * 60 * 1000L, initialDelay = 5 * 60 * 1000L)

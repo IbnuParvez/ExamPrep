@@ -34,6 +34,7 @@ import com.examprep.api.dto.StudyPackDto;
 import com.examprep.api.dto.StudyPackStatusDto;
 import com.examprep.api.dto.StudyPackSummaryDto;
 import com.examprep.api.dto.StudyPreferences;
+import com.examprep.api.dto.StudyStatsDto;
 import com.examprep.api.dto.TutorAnswerDto;
 import com.examprep.api.dto.TutorMessageDto;
 import com.examprep.api.dto.TutorQuestionDto;
@@ -69,6 +70,8 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
     private static final int MIN_EXAM_QUESTIONS = 4;
     private static final int DEFAULT_EXAM_QUESTIONS = 10;
     private static final int DEFAULT_EXAM_MINUTES = 15;
+    /** Extra time allowed between the last answer and submission, for slow networks and auto-submit. */
+    private static final int SUBMIT_GRACE_SECONDS = 300;
 
     private final StudyPackRepository studyPackRepository;
     private final FlashcardRepository flashcardRepository;
@@ -126,6 +129,26 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
     @Override
     public StudyPackStatusDto getStatus(UUID studyPackId, UUID ownerId) {
         StudyPack pack = requireOwnedPack(studyPackId, ownerId);
+        return new StudyPackStatusDto(pack.getId(), pack.getStatus(), pack.getProgressMessage(),
+                safeFailure(pack), pack.getProgressPercent());
+    }
+
+    @Override
+    public StudyPackStatusDto retry(UUID studyPackId, UUID ownerId) {
+        StudyPack pack = requireOwnedPack(studyPackId, ownerId);
+        if (pack.getStatus() != StudyPackStatus.FAILED) {
+            throw new ValidationException("Only a study package that failed can be generated again.");
+        }
+        // All preferences are stored on the pack, so a retry does not need the student to re-enter them.
+        pack.markProcessing("Waiting to start", 5);
+        studyPackRepository.saveAndFlush(pack);
+        try {
+            generationService.generate(pack.getId());
+        } catch (TaskRejectedException exception) {
+            log.warn("Study generation queue is full; retry of package {} was not scheduled", pack.getId());
+            pack.markFailed("The AI generation queue is busy right now. Please try again.");
+            studyPackRepository.save(pack);
+        }
         return new StudyPackStatusDto(pack.getId(), pack.getStatus(), pack.getProgressMessage(),
                 safeFailure(pack), pack.getProgressPercent());
     }
@@ -241,9 +264,10 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
             }
         }
         attemptAnswerRepository.saveAll(rows);
-        int timeTaken = submission.timeTakenSeconds() > 0
-                ? Math.min(submission.timeTakenSeconds(), attempt.getDurationSeconds() + 300)
-                : (int) Math.max(0, Duration.between(attempt.getStartedAt(), Instant.now()).getSeconds());
+        // Trust the server clock, not the hidden form field: the browser value is spoofable and is lost
+        // when the exam page is reloaded.
+        int elapsed = (int) Math.max(0, Duration.between(attempt.getStartedAt(), Instant.now()).getSeconds());
+        int timeTaken = Math.min(elapsed, attempt.getDurationSeconds() + SUBMIT_GRACE_SECONDS);
         attempt.submit(score, timeTaken);
         attemptRepository.save(attempt);
         return buildResult(attempt);
@@ -280,6 +304,19 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
     }
 
     @Override
+    public StudyStatsDto statistics(UUID ownerId) {
+        // Counting a 10-item page made "Mock exams taken" freeze at 10 for every active student, and
+        // ignored every earlier score.
+        int attempts = (int) attemptRepository.countByOwnerIdAndStatus(ownerId, AttemptStatus.SUBMITTED);
+        if (attempts == 0) {
+            return new StudyStatsDto(0, 0, 0);
+        }
+        int best = (int) Math.round(attemptRepository.maxPercentage(ownerId, AttemptStatus.SUBMITTED));
+        int average = (int) Math.round(attemptRepository.averagePercentage(ownerId, AttemptStatus.SUBMITTED));
+        return new StudyStatsDto(attempts, best, average);
+    }
+
+    @Override
     public PracticeAnswerDto revealPracticeAnswer(UUID studyPackId, UUID questionId, UUID ownerId) {
         requireOwnedPack(studyPackId, ownerId);
         QuestionEntity question = questionRepository.findByIdAndStudyPackId(questionId, studyPackId)
@@ -307,9 +344,11 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
         if (message.isBlank()) {
             throw new ValidationException("Type a question for the tutor.");
         }
-        tutorMessageRepository.save(TutorMessageEntity.user(ownerId, studyPackId, message));
         StudyPackDto dto = toDto(pack, ownerId);
         TutorAnswerDto answer = tutorService.answer(ownerId, dto, message);
+        // Persist the exchange only once the model has answered. Saving the question first left an
+        // unanswered student message behind on every failure and duplicated it on each retry.
+        tutorMessageRepository.save(TutorMessageEntity.user(ownerId, studyPackId, message));
         tutorMessageRepository.save(TutorMessageEntity.assistant(ownerId, studyPackId, answer.answer(),
                 answer.sources()));
         return answer;
@@ -417,12 +456,23 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
                 content.formulas(),
                 flashcards,
                 practiceQuestions,
-                (int) questionRepository.countByStudyPackIdAndExamEligibleTrue(pack.getId()),
+                examLength(pack),
                 pack.getExamDurationMinutes() == null ? DEFAULT_EXAM_MINUTES : pack.getExamDurationMinutes(),
                 pack.getStatus(),
                 pack.getLanguage(),
                 pack.getAcademicLevel(),
                 pack.getCreatedAt());
+    }
+
+    /**
+     * The number of questions the mock examination will actually contain, which startExam() derives from
+     * the eligible pool and the configured length. Reporting the whole pool made the exam introduction
+     * promise more questions than the attempt contained.
+     */
+    private int examLength(StudyPack pack) {
+        int eligible = (int) questionRepository.countByStudyPackIdAndExamEligibleTrue(pack.getId());
+        int configured = pack.getExamQuestionCount() == null ? DEFAULT_EXAM_QUESTIONS : pack.getExamQuestionCount();
+        return Math.min(eligible, Math.max(MIN_EXAM_QUESTIONS, configured));
     }
 
     private StudyPackDto.Flashcard toFlashcard(FlashcardEntity entity) {

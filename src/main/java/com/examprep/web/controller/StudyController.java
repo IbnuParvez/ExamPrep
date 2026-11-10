@@ -81,6 +81,14 @@ public class StudyController {
         return "study/tutor";
     }
 
+    @PostMapping("/{studyPackId}/retry")
+    public String retry(@PathVariable UUID studyPackId, RedirectAttributes redirectAttributes) {
+        UUID ownerId = currentUserService.requireCurrentUserId();
+        studyPackService.retry(studyPackId, ownerId);
+        redirectAttributes.addFlashAttribute("notice", "Generating the study package again.");
+        return "redirect:/study/" + studyPackId;
+    }
+
     @PostMapping("/{studyPackId}/delete")
     public String delete(@PathVariable UUID studyPackId, RedirectAttributes redirectAttributes) {
         UUID ownerId = currentUserService.requireCurrentUserId();

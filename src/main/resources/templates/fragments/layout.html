@@ -28,7 +28,7 @@
                 <a th:href="@{/documents}" th:classappend="${activeNav == 'documents'} ? 'is-active'">Documents</a>
                 <a th:href="@{/documents/upload}" th:classappend="${activeNav == 'upload'} ? 'is-active'">Upload</a>
             </th:block>
-            <a sec:authorize="!isAuthenticated()" href="#how-it-works">How it works</a>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/#how-it-works}">How it works</a>
             <a sec:authorize="!isAuthenticated()" th:href="@{/privacy}">Privacy</a>
         </nav>
 

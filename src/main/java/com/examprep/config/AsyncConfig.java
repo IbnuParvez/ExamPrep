@@ -43,7 +43,9 @@ public class AsyncConfig {
         executor.setThreadNamePrefix(prefix);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(30);
+        // Must outlast a single Gemini request (examprep.ai.timeout-seconds, 240 by default); 30 seconds
+        // guaranteed that a redeploy interrupted every generation in flight.
+        executor.setAwaitTerminationSeconds(300);
         executor.initialize();
         return executor;
     }
