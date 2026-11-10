@@ -32,6 +32,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 ## Implemented features
 
 **Accounts and security**
+
 - Student registration with validation, BCrypt password hashing and automatic sign-in.
 - Email/password login, logout, session fixation protection and CSRF on every state-changing request.
 - Per-student isolation: documents, study packages, attempts and tutor conversations are scoped to the
@@ -39,6 +40,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 - Private upload storage outside the web root, generated internal filenames, content-type detection.
 
 **Documents**
+
 - Upload via file picker or drag-and-drop with client and server validation, progress and status polling.
 - Supports PDF, DOCX, DOC, PPTX, PPT, TXT, Markdown, RTF, ODT and ODP (25 MB default limit, configurable).
 - PDF extraction is page-aware (PDFBox); DOCX/PPTX/DOC/PPT keep real section and slide boundaries (POI);
@@ -48,6 +50,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 - Document deletion removes the file, chunks and all dependent study data.
 
 **AI study engine**
+
 - Gemini is called only from Java, through a gateway interface; the API key never reaches the browser.
 - Configurable model (`GEMINI_MODEL`, default `gemini-3.8-flash`) and request timeout/retry settings.
 - Structured JSON output validated into typed records; malformed output gets one repair attempt, then fails
@@ -59,6 +62,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
   explicitly downgraded to study content.
 
 **Study package**
+
 - Overview, introduction, summary, learning objectives and high-value revision areas.
 - Topics with explanations, key concepts and sources; revision notes; definitions; formulas/key facts.
 - Interactive flashcards (reveal, previous/next, keyboard support) with review recording.
@@ -75,14 +79,18 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 ## Quick start with Docker Compose
 
 1. Copy the environment template and fill it in:
+
    ```bash
    cp .env.example .env
    # edit .env — at minimum set POSTGRES_PASSWORD and GOOGLE_API_KEY
    ```
+
 2. Build and start:
+
    ```bash
    docker compose up --build
    ```
+
 3. Open <http://localhost:8080>, create an account and upload a document.
 
 The database and uploaded files live in named volumes (`examprep-db`, `examprep-uploads`), so restarting
@@ -243,3 +251,4 @@ study packages, attempts and tutor history. The in-app privacy notice is served 
 - [Architecture](docs/architecture.md)
 - [Agent contracts and module ownership](docs/agent-contracts.md)
 - [Testing](docs/testing.md)
+.
