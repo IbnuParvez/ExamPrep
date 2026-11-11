@@ -61,6 +61,9 @@
         appendMessage("user", message, []);
         input.value = "";
         submit.disabled = true;
+        // Remember the optimistic bubble so a failed request does not leave a question that the server
+        // never received (and never persisted) in the conversation.
+        let pendingBubble = log.lastElementChild;
         if (typing) {
             typing.hidden = false;
         }
@@ -76,11 +79,11 @@
             }
         } catch (error) {
             window.ExamPrep.toast(error.message, true);
-            appendMessage("assistant", "I could not answer that just now. " + error.message, []);
-            // Give the student their question back instead of silently losing what they typed.
-            if (!input.value) {
-                input.value = message;
+            if (pendingBubble && pendingBubble.parentNode) {
+                pendingBubble.parentNode.removeChild(pendingBubble);
             }
+            // Restore what the student typed instead of silently losing the question.
+            input.value = message;
         } finally {
             submit.disabled = false;
             if (typing) {

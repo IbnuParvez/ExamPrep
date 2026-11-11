@@ -50,21 +50,31 @@ public class TutorMessageEntity {
     }
 
     public static TutorMessageEntity user(UUID ownerId, UUID studyPackId, String content) {
-        return create(ownerId, studyPackId, TutorRole.USER, content, null);
+        return user(ownerId, studyPackId, content, null);
+    }
+
+    public static TutorMessageEntity user(UUID ownerId, UUID studyPackId, String content, Instant createdAt) {
+        return create(ownerId, studyPackId, TutorRole.USER, content, null, createdAt);
     }
 
     public static TutorMessageEntity assistant(UUID ownerId, UUID studyPackId, String content, List<String> sources) {
-        return create(ownerId, studyPackId, TutorRole.ASSISTANT, content, sources);
+        return assistant(ownerId, studyPackId, content, sources, null);
+    }
+
+    public static TutorMessageEntity assistant(UUID ownerId, UUID studyPackId, String content, List<String> sources,
+                                               Instant createdAt) {
+        return create(ownerId, studyPackId, TutorRole.ASSISTANT, content, sources, createdAt);
     }
 
     private static TutorMessageEntity create(UUID ownerId, UUID studyPackId, TutorRole role, String content,
-                                             List<String> sources) {
+                                             List<String> sources, Instant createdAt) {
         TutorMessageEntity entity = new TutorMessageEntity();
         entity.ownerId = ownerId;
         entity.studyPackId = studyPackId;
         entity.role = role;
         entity.content = content;
         entity.sourceRefs = sources;
+        entity.createdAt = createdAt;
         return entity;
     }
 

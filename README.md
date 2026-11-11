@@ -2,7 +2,8 @@
 
 ExamPrep is a browser-based AI examination preparation platform. A student uploads course material
 (lecture notes, handouts, slide decks, textbooks), the application extracts the text with truthful page,
-slide or section references, and Google Gemini turns it into a structured study package: summary, topics,
+slide or section references, and a self-hosted FreeLLMAPI router turns it into a structured study package:
+summary, topics,
 revision notes, definitions, formulas, flashcards, practice questions, a timed mock examination and a
 document-grounded tutor.
 
@@ -21,7 +22,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 | Browser interface | Thymeleaf 3, HTML5, CSS3, vanilla JavaScript |
 | Persistence | Spring Data JPA / Hibernate 6, PostgreSQL 16+, Flyway migrations |
 | Authentication | Spring Security (session-based, BCrypt, CSRF) |
-| AI | Official Google Gen AI Java SDK (`com.google.genai:google-genai:1.80.0`), Gemini Developer API |
+| AI | Self-hosted [FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) OpenAI-compatible router (`java.net.http.HttpClient` + Jackson) |
 | Document extraction | Apache Tika 3, Apache PDFBox 3, Apache POI 5 (structural boundaries) |
 | Build | Maven (wrapper included) |
 | Tests | JUnit 5, Mockito, Spring Boot Test, MockMvc, embedded PostgreSQL |
@@ -51,8 +52,10 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 
 **AI study engine**
 
-- Gemini is called only from Java, through a gateway interface; the API key never reaches the browser.
-- Configurable model (`GEMINI_MODEL`, default `gemini-3.8-flash`) and request timeout/retry settings.
+- The AI router is called only from Java, through a gateway interface; the proxy key never reaches the
+  browser.
+- Configurable routing (`FREELLMAPI_MODEL`, default `auto`), timeouts, retry count and concurrency limit.
+- Long documents are sampled evenly across their whole length, not just their opening pages.
 - Structured JSON output validated into typed records; malformed output gets one repair attempt, then fails
   loudly. No fake study material is ever stored.
 - Large documents are analysed in sections (hierarchical summarisation) instead of one giant request.
@@ -82,7 +85,7 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 
    ```bash
    cp .env.example .env
-   # edit .env — at minimum set POSTGRES_PASSWORD and GOOGLE_API_KEY
+   # edit .env — at minimum set POSTGRES_PASSWORD and FREELLMAPI_API_KEY
    ```
 
 2. Build and start:
@@ -96,8 +99,12 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 The database and uploaded files live in named volumes (`examprep-db`, `examprep-uploads`), so restarting
 the containers does not lose data. The application image runs as a non-root user and contains no secrets.
 
-The application **starts without a Gemini key**. Extraction works, but study generation and the tutor
-report a clear configuration error until `GOOGLE_API_KEY` is set.
+The application **starts without a router key**. Extraction works, but study generation and the tutor
+report a clear configuration error until `FREELLMAPI_API_KEY` is set.
+
+Inside the container the app reaches the host's router at `http://host.docker.internal:3001/v1`
+(`extra_hosts` maps it on Linux Docker Engine), while your local `.env` keeps
+`FREELLMAPI_BASE_URL=http://localhost:3001/v1` for `./mvnw spring-boot:run`. The same `.env` works for both.
 
 ---
 
@@ -122,10 +129,12 @@ CREATE DATABASE examprep OWNER examprep;
 
 Flyway creates every table on startup; Hibernate runs in `validate` mode only.
 
-### 3. Gemini API key
+### 3. FreeLLMAPI router
 
-Create a key at <https://aistudio.google.com/apikey> and make sure the Gemini API is enabled for the
-project. Set `GOOGLE_API_KEY` in your environment (or in `.env`, see below). Never commit the key.
+Run the self-hosted [tashfeenahmed/freellmapi](https://github.com/tashfeenahmed/freellmapi) router on the
+host (default port 3001), enable at least one provider key/model in its dashboard, and copy the unified
+proxy key (Keys → Agents). Set `FREELLMAPI_API_KEY` and `FREELLMAPI_BASE_URL` in your environment (or in
+`.env`, see below). Never commit the key.
 
 ### 4. Environment variables
 
@@ -140,13 +149,15 @@ locally. Docker Compose reads `.env` automatically.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `GOOGLE_API_KEY` | Gemini Developer API key | *(empty — AI disabled)* |
-| `GEMINI_MODEL` | Model used for all AI operations | `gemini-3.8-flash` |
-| `GEMINI_TIMEOUT_SECONDS` | Timeout for one Gemini attempt, and the total budget a retried call may use | `240` |
-| `GEMINI_MAX_RETRIES` | Retries for transient 429/5xx failures, only while they fit that budget | `2` |
-| `GEMINI_RETRY_BASE_DELAY_MS` | Backoff before a retry; doubles after each further failure | `5000` |
-| `GEMINI_MAX_OUTPUT_TOKENS` | Output ceiling for one answer, including internal thinking tokens | `65536` |
-| `GEMINI_THINKING_LEVEL` | Thinking effort for Gemini 3.x models: `low`, `medium` or `high` | `low` |
+| `FREELLMAPI_BASE_URL` | Router base URL (the app appends `/v1` when the path is empty) | `http://localhost:3001/v1` |
+| `FREELLMAPI_API_KEY` | Unified proxy key from the FreeLLMAPI dashboard | *(empty — AI disabled)* |
+| `FREELLMAPI_MODEL` | Routing mode or pinned model ID (`auto`, `auto:smart`, `auto:fast`, `auto:reliable`, `auto:balanced`, `fusion`, …) | `auto` |
+| `FREELLMAPI_CONNECT_TIMEOUT_SECONDS` | TCP/TLS connect timeout | `10` |
+| `FREELLMAPI_TIMEOUT_SECONDS` | Per-request timeout for background generation | `180` |
+| `FREELLMAPI_TUTOR_TIMEOUT_SECONDS` | Per-request timeout for synchronous tutor calls | `60` |
+| `FREELLMAPI_MAX_RETRIES` | Retries for transient 408/5xx failures, timeouts and empty completions | `2` |
+| `FREELLMAPI_MAX_CONCURRENCY` | Maximum simultaneous router requests | `3` |
+| `FREELLMAPI_REASONING_EFFORT` | Optional reasoning hint forwarded to providers that support it | `low` |
 | `SPRING_DATASOURCE_URL` | JDBC URL | `jdbc:postgresql://localhost:5432/examprep` |
 | `SPRING_DATASOURCE_USERNAME` | Database user | `examprep` |
 | `SPRING_DATASOURCE_PASSWORD` | Database password | `examprep` |
@@ -168,7 +179,7 @@ Open <http://localhost:8080>.
 ./mvnw clean verify
 ```
 
-Tests start their own PostgreSQL from embedded binaries, so **no local database and no Gemini API key are
+Tests start their own PostgreSQL from embedded binaries, so **no local database and no FreeLLMAPI key are
 required**. See [docs/testing.md](docs/testing.md) for coverage details and limitations.
 
 ---
@@ -184,7 +195,7 @@ src/main/java/com/examprep
 ├── user/           account entity, repository, registration
 ├── common/         application exceptions
 ├── document/       upload validation, private storage, extraction, chunking, async pipeline
-├── ai/             Gemini client/gateway, prompts, structured generation, retrieval, sanitisation
+├── ai/             FreeLLMAPI client/gateway, prompts, structured generation, retrieval, sanitisation
 ├── study/          study packages, flashcards, questions, attempts, tutor, progress
 └── web/            Thymeleaf controllers, JSON endpoints, forms, error handling
 
@@ -223,8 +234,8 @@ src/main/resources
 
 ## Privacy
 
-Extracted document text is processed by Google's Gemini API to generate study material and to answer tutor
-questions. Files are stored privately and can be deleted at any time; deleting a document also deletes its
+Extracted document text is processed by the administrator's self-hosted FreeLLMAPI router, which forwards it
+to the configured model provider, to generate study material and answer tutor questions. Files are stored privately and can be deleted at any time; deleting a document also deletes its
 study packages, attempts and tutor history. The in-app privacy notice is served at `/privacy`.
 
 ---
@@ -239,8 +250,8 @@ study packages, attempts and tutor history. The in-app privacy notice is served 
   in this release, as specified.
 - **English-oriented prompts.** `language` is passed to the model, but prompt templates and interface copy
   are English.
-- **Real Gemini calls are not part of automated tests.** They use mocked gateway responses; a live smoke
-  test requires the project owner's API key.
+- **Real router calls are not part of automated tests.** They use mocked gateway responses; a live smoke
+  test requires the project owner's FreeLLMAPI proxy key.
 - **Short-answer questions are practice-only.** Mock exams use multiple-choice and true/false questions so
   scoring is fully automatic.
 - The five workstreams described in the development brief were delivered as one integrated change set on

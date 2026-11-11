@@ -2,7 +2,7 @@ package com.examprep.ai.exception;
 
 import com.examprep.common.AppException;
 
-/** Gemini is not configured on this server, so no AI operation can run. */
+/** The AI service is not configured on this server, so no AI operation can run. */
 public class AiUnavailableException extends AppException {
 
     public AiUnavailableException(String message) {

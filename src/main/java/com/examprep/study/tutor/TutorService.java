@@ -1,14 +1,16 @@
 package com.examprep.study.tutor;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.examprep.ai.client.GeminiGateway;
-import com.examprep.ai.client.GeminiPrompt;
+import com.examprep.ai.client.AiGateway;
+import com.examprep.ai.client.AiPrompt;
 import com.examprep.ai.dto.TutorModelResponse;
 import com.examprep.ai.exception.AiResponseException;
 import com.examprep.ai.prompt.Prompts;
@@ -17,7 +19,6 @@ import com.examprep.ai.retrieval.SourceReferences;
 import com.examprep.api.DocumentApplicationService;
 import com.examprep.api.dto.DocumentChunk;
 import com.examprep.api.dto.DocumentContext;
-import com.examprep.api.dto.StudyPackDto;
 import com.examprep.api.dto.TutorAnswerDto;
 import com.examprep.config.AiProperties;
 import com.examprep.study.domain.TutorMessageEntity;
@@ -35,16 +36,18 @@ public class TutorService {
 
     private static final Logger log = LoggerFactory.getLogger(TutorService.class);
     private static final int HISTORY_MESSAGES = 10;
+    /** A tutor answer is a short explanation; 4096 tokens is plenty and keeps latency predictable. */
+    private static final int TUTOR_MAX_OUTPUT_TOKENS = 4_096;
 
     private final DocumentApplicationService documentService;
     private final ChunkRetriever chunkRetriever;
-    private final GeminiGateway gateway;
+    private final AiGateway gateway;
     private final ObjectMapper objectMapper;
     private final AiProperties properties;
     private final TutorMessageRepository messageRepository;
 
     public TutorService(DocumentApplicationService documentService, ChunkRetriever chunkRetriever,
-                        GeminiGateway gateway, ObjectMapper objectMapper, AiProperties properties,
+                        AiGateway gateway, ObjectMapper objectMapper, AiProperties properties,
                         TutorMessageRepository messageRepository) {
         this.documentService = documentService;
         this.chunkRetriever = chunkRetriever;
@@ -54,8 +57,8 @@ public class TutorService {
         this.messageRepository = messageRepository;
     }
 
-    public TutorAnswerDto answer(java.util.UUID ownerId, StudyPackDto studyPack, String question) {
-        DocumentContext context = documentService.getContext(studyPack.documentId(), ownerId);
+    public TutorAnswerDto answer(UUID ownerId, UUID studyPackId, UUID documentId, String question) {
+        DocumentContext context = documentService.getContext(documentId, ownerId);
         List<DocumentChunk> retrieved = chunkRetriever.retrieve(
                 context.chunks().toArray(new DocumentChunk[0]), question,
                 properties.getTutorChunkLimit(), properties.getTutorContextChars());
@@ -63,11 +66,12 @@ public class TutorService {
             throw new AiResponseException("This document has no extracted text to search.");
         }
         SourceReferences references = SourceReferences.from(retrieved);
-        String conversation = renderHistory(studyPack.id());
+        String conversation = renderHistory(studyPackId);
 
         String prompt = Prompts.tutorPrompt(context.title(), Prompts.renderSources(retrieved), conversation, question);
-        String raw = gateway.generate(GeminiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION, prompt,
-                Math.min(properties.getMaxOutputTokens(), 16384)));
+        Duration timeout = Duration.ofSeconds(Math.max(10, properties.getTutorTimeoutSeconds()));
+        String raw = gateway.generate(AiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION, prompt,
+                TUTOR_MAX_OUTPUT_TOKENS, timeout));
         TutorModelResponse response;
         try {
             response = parse(raw);
@@ -75,8 +79,8 @@ public class TutorService {
             // One repair attempt: the model can usually reformat its own answer, and without this the
             // student saw a failure for a purely syntactic problem.
             log.warn("Tutor response could not be parsed; requesting one repair attempt");
-            response = parse(gateway.generate(GeminiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION,
-                    Prompts.tutorJsonRepairPrompt(raw), Math.min(properties.getMaxOutputTokens(), 16384))));
+            response = parse(gateway.generate(AiPrompt.json(Prompts.TUTOR_SYSTEM_INSTRUCTION,
+                    Prompts.tutorJsonRepairPrompt(raw), TUTOR_MAX_OUTPUT_TOKENS, timeout)));
         }
         String answer = response.answer() == null ? "" : response.answer().strip();
         if (answer.isBlank()) {
@@ -89,7 +93,7 @@ public class TutorService {
         return new TutorAnswerDto(answer, sources, grounded, java.time.Instant.now());
     }
 
-    private String renderHistory(java.util.UUID studyPackId) {
+    private String renderHistory(UUID studyPackId) {
         List<TutorMessageEntity> history = messageRepository.findByStudyPackIdOrderByCreatedAtAsc(studyPackId);
         int fromIndex = Math.max(0, history.size() - HISTORY_MESSAGES);
         return history.subList(fromIndex, history.size()).stream()

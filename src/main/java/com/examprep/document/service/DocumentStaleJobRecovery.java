@@ -43,9 +43,10 @@ public class DocumentStaleJobRecovery implements ApplicationRunner {
     }
 
     private void recoverAll() {
+        // A cutoff in the near future matches every in-progress row, so all of them are recovered now.
+        Instant cutoff = Instant.now().plusSeconds(1);
         int recovered = documentRepository.markStaleJobsFailed(DocumentStatus.FAILED,
-                List.of(DocumentStatus.UPLOADED, DocumentStatus.PROCESSING), Instant.now(), REASON,
-                Instant.now());
+                List.of(DocumentStatus.UPLOADED, DocumentStatus.PROCESSING), cutoff, REASON, Instant.now());
         if (recovered > 0) {
             log.warn("Recovered {} interrupted document job(s) on startup", recovered);
         }

@@ -20,9 +20,11 @@ public class AsyncConfig {
     public static final String STUDY_EXECUTOR = "studyTaskExecutor";
 
     private final ProcessingProperties properties;
+    private final AiProperties aiProperties;
 
-    public AsyncConfig(ProcessingProperties properties) {
+    public AsyncConfig(ProcessingProperties properties, AiProperties aiProperties) {
         this.properties = properties;
+        this.aiProperties = aiProperties;
     }
 
     @Bean(name = DOCUMENT_EXECUTOR)
@@ -43,9 +45,9 @@ public class AsyncConfig {
         executor.setThreadNamePrefix(prefix);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        // Must outlast a single Gemini request (examprep.ai.timeout-seconds, 240 by default); 30 seconds
-        // guaranteed that a redeploy interrupted every generation in flight.
-        executor.setAwaitTerminationSeconds(300);
+        // Must outlast a single AI request (examprep.ai.timeout-seconds, otherwise a redeploy
+        // interrupts every generation in flight).
+        executor.setAwaitTerminationSeconds(Math.max(60, aiProperties.getTimeoutSeconds() + 60));
         executor.initialize();
         return executor;
     }

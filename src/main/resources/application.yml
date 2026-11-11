@@ -47,17 +47,20 @@ examprep:
     location: ${APP_STORAGE_LOCATION:./data/uploads}
     max-file-size-mb: ${APP_MAX_UPLOAD_SIZE_MB:25}
   ai:
-    api-key: ${GOOGLE_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3.8-flash}
-    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:240}
-    max-retries: ${GEMINI_MAX_RETRIES:2}
-    retry-base-delay-millis: ${GEMINI_RETRY_BASE_DELAY_MS:5000}
-    max-concurrent-requests: ${GEMINI_MAX_CONCURRENT_REQUESTS:4}
+    # Self-hosted FreeLLMAPI OpenAI-compatible router. localhost works for `./mvnw spring-boot:run`;
+    # compose.yaml maps FREELLMAPI_DOCKER_BASE_URL to host.docker.internal for the container.
+    base-url: ${FREELLMAPI_BASE_URL:http://localhost:3001/v1}
+    api-key: ${FREELLMAPI_API_KEY:}
+    model: ${FREELLMAPI_MODEL:auto}
+    connect-timeout-seconds: ${FREELLMAPI_CONNECT_TIMEOUT_SECONDS:10}
+    timeout-seconds: ${FREELLMAPI_TIMEOUT_SECONDS:180}
+    tutor-timeout-seconds: ${FREELLMAPI_TUTOR_TIMEOUT_SECONDS:60}
+    max-retries: ${FREELLMAPI_MAX_RETRIES:2}
+    max-concurrency: ${FREELLMAPI_MAX_CONCURRENCY:3}
     temperature: 0.35
-    # Includes the model's internal thinking tokens: 32768 was regularly spent before any answer.
-    max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:65536}
-    # low|medium|high: lower effort leaves more of the output budget for the answer itself.
-    thinking-level: ${GEMINI_THINKING_LEVEL:low}
+    # Safe across heterogeneous free providers, unlike provider-specific output ceilings.
+    max-output-tokens: 16384
+    reasoning-effort: ${FREELLMAPI_REASONING_EFFORT:low}
     max-source-chars: 90000
     segment-char-limit: 18000
   processing:

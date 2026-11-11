@@ -35,6 +35,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Runs study generation outside the browser request. Progress is persisted so polling clients see
  * honest status, and failures are stored with a safe explanation instead of a fake result.
+ *
+ * <p>No transaction is ever held open across an AI HTTP call: each short write re-reads the pack
+ * inside its own transaction so a package deleted while the model was working is never resurrected.
  */
 @Service
 public class StudyGenerationService {
@@ -69,8 +72,7 @@ public class StudyGenerationService {
             return;
         }
         try {
-            pack.markProcessing("Reading extracted document text", 10);
-            studyPackRepository.save(pack);
+            markProcessing(studyPackId, "Reading extracted document text", 10);
 
             DocumentContext context = documentService.getContext(pack.getDocumentId(), pack.getOwnerId());
             StudyPreferences preferences = new StudyPreferences(
@@ -80,20 +82,27 @@ public class StudyGenerationService {
                     defaultValue(pack.getExamQuestionCount(), 10),
                     defaultValue(pack.getExamDurationMinutes(), 15));
 
-            GeneratedStudyPackage generated = generator.generate(context, preferences, (message, percent) -> {
-                pack.markProcessing(message, percent);
-                studyPackRepository.save(pack);
-            });
+            GeneratedStudyPackage generated = generator.generate(context, preferences,
+                    (message, percent) -> markProcessing(studyPackId, message, percent));
 
-            saveGeneratedPackage(pack, generated);
+            saveGeneratedPackage(studyPackId, generated);
             log.info("Study package {} is ready", studyPackId);
         } catch (AppException exception) {
             log.warn("Study generation failed for package {}: {}", studyPackId, exception.getMessage());
-            fail(pack, exception.getMessage());
+            fail(studyPackId, exception.getMessage());
         } catch (Exception exception) {
             log.warn("Study generation failed unexpectedly for package {}", studyPackId, exception);
-            fail(pack, "We could not generate this study package. Please try again.");
+            fail(studyPackId, "We could not generate this study package. Please try again.");
         }
+    }
+
+    /** Persists one progress update in its own short transaction. */
+    private void markProcessing(UUID studyPackId, String message, int percent) {
+        transactionTemplate.executeWithoutResult(status -> studyPackRepository.findById(studyPackId)
+                .ifPresent(current -> {
+                    current.markProcessing(message, percent);
+                    studyPackRepository.save(current);
+                }));
     }
 
     /**
@@ -101,9 +110,9 @@ public class StudyGenerationService {
      * to be five separate auto-committed saves, so a failure part-way left flashcards and questions
      * attached to a package that had been marked FAILED.
      */
-    private void saveGeneratedPackage(StudyPack pack, GeneratedStudyPackage generated) {
+    private void saveGeneratedPackage(UUID studyPackId, GeneratedStudyPackage generated) {
         transactionTemplate.executeWithoutResult(status -> {
-            StudyPack current = studyPackRepository.findById(pack.getId()).orElse(null);
+            StudyPack current = studyPackRepository.findById(studyPackId).orElse(null);
             if (current == null) {
                 // The package was deleted while the model was working; never resurrect it.
                 return;
@@ -165,13 +174,13 @@ public class StudyGenerationService {
         questionRepository.saveAll(questions);
     }
 
-    private void fail(StudyPack pack, String message) {
-        // A deleted package (for example a deleted document) must not be resurrected.
-        if (!studyPackRepository.existsById(pack.getId())) {
-            return;
-        }
-        pack.markFailed(message);
-        studyPackRepository.save(pack);
+    private void fail(UUID studyPackId, String message) {
+        transactionTemplate.executeWithoutResult(status -> studyPackRepository.findById(studyPackId)
+                .ifPresent(current -> {
+                    // A deleted package (for example a deleted document) must not be resurrected.
+                    current.markFailed(message);
+                    studyPackRepository.save(current);
+                }));
     }
 
     private int defaultValue(Integer value, int fallback) {
@@ -180,6 +189,6 @@ public class StudyGenerationService {
 
     /** Used by tests to assert that an unusable response fails loudly. */
     static AiResponseException invalidResponse() {
-        return new AiResponseException("Gemini returned unusable study material.");
+        return new AiResponseException("The AI service returned unusable study material.");
     }
 }

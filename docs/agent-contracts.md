@@ -29,9 +29,11 @@ public interface StudyPackApplicationService {
     StudyPackDto getStudyPack(UUID studyPackId, UUID ownerId);
     List<StudyPackSummaryDto> listStudyPacks(UUID ownerId);
     void delete(UUID studyPackId, UUID ownerId);
+    StudyPackStatusDto retryGeneration(UUID studyPackId, UUID ownerId);
     ExamSessionDto startExam(UUID studyPackId, UUID ownerId);
     ExamSessionDto getExamSession(UUID attemptId, UUID ownerId);
     QuizResultDto submitExam(UUID studyPackId, UUID ownerId, QuizSubmissionDto submission);
+    QuizResultDto submitExamAttempt(UUID attemptId, UUID ownerId, QuizSubmissionDto submission);
     QuizResultDto getResult(UUID attemptId, UUID ownerId);
     List<QuizAttemptSummaryDto> recentAttempts(UUID ownerId, int limit);
     PracticeAnswerDto revealPracticeAnswer(UUID studyPackId, UUID questionId, UUID ownerId);
@@ -76,7 +78,7 @@ ownership checks explicit and supports idempotent resubmission.
 - `QuestionType`: `MULTIPLE_CHOICE`, `TRUE_FALSE`, `SHORT_ANSWER` (+ `label()`, `isAutoScored()`).
 - `Difficulty`: `EASY`, `MEDIUM`, `HARD`.
 
-Internal AI DTOs (`com.examprep.ai.dto`) mirror the Gemini JSON contract and never leave the AI module
+Internal AI DTOs (`com.examprep.ai.dto`) mirror the AI JSON contract and never leave the AI module
 except as sanitised `StudyPackDto` content.
 
 ## Ownership boundaries
@@ -85,7 +87,7 @@ except as sanitised `StudyPackDto` content.
 | --- | --- |
 | 1. Platform foundation and integration | `pom.xml`, `mvnw*`, `ExamPrepApplication`, `config/**`, `security/**`, `user/**`, `common/**`, `api/**`, `application.yml`, `V1__users.sql`, architecture/contract docs |
 | 2. Document ingestion | `document/**`, `V2__documents.sql`, upload/extraction tests |
-| 3. Gemini and study engine | `ai/**`, `study/**`, `V3__study_and_ai.sql`, AI/quiz tests |
+| 3. AI router and study engine | `ai/**`, `study/**`, `V3__study_and_ai.sql`, AI/quiz tests |
 | 4. Browser interface and UX | `web/**`, `templates/**`, `static/**` |
 | 5. QA, Docker and release | `src/test/**`, `.github/workflows/**`, `Dockerfile`, `compose.yaml`, `README.md`, `docs/testing.md`, `.env.example` |
 

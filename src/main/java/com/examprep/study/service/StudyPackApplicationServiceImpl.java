@@ -18,7 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.examprep.ai.service.StudyGenerationService;
 import com.examprep.api.DocumentApplicationService;
@@ -38,6 +40,7 @@ import com.examprep.api.dto.StudyStatsDto;
 import com.examprep.api.dto.TutorAnswerDto;
 import com.examprep.api.dto.TutorMessageDto;
 import com.examprep.api.dto.TutorQuestionDto;
+import com.examprep.api.model.DocumentStatus;
 import com.examprep.api.model.QuestionType;
 import com.examprep.api.model.StudyPackStatus;
 import com.examprep.common.AppException;
@@ -84,6 +87,7 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
     private final StudyGenerationService generationService;
     private final TutorService tutorService;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     public StudyPackApplicationServiceImpl(StudyPackRepository studyPackRepository,
                                            FlashcardRepository flashcardRepository,
@@ -95,7 +99,8 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
                                            DocumentApplicationService documentService,
                                            StudyGenerationService generationService,
                                            TutorService tutorService,
-                                           ObjectMapper objectMapper) {
+                                           ObjectMapper objectMapper,
+                                           PlatformTransactionManager transactionManager) {
         this.studyPackRepository = studyPackRepository;
         this.flashcardRepository = flashcardRepository;
         this.questionRepository = questionRepository;
@@ -107,6 +112,7 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
         this.generationService = generationService;
         this.tutorService = tutorService;
         this.objectMapper = objectMapper;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Override
@@ -134,13 +140,20 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
     }
 
     @Override
-    public StudyPackStatusDto retry(UUID studyPackId, UUID ownerId) {
+    public StudyPackStatusDto retryGeneration(UUID studyPackId, UUID ownerId) {
         StudyPack pack = requireOwnedPack(studyPackId, ownerId);
         if (pack.getStatus() != StudyPackStatus.FAILED) {
             throw new ValidationException("Only a study package that failed can be generated again.");
         }
+        // The source text must still be extractable; retrying after its document was deleted or failed
+        // would queue a job that can only fail again.
+        DocumentStatusDto document = documentService.getStatus(pack.getDocumentId(), ownerId);
+        if (document.status() != DocumentStatus.READY) {
+            throw new ValidationException("The source document is not ready, so this package cannot be "
+                    + "generated again.");
+        }
         // All preferences are stored on the pack, so a retry does not need the student to re-enter them.
-        pack.markProcessing("Waiting to start", 5);
+        pack.resetForRetry();
         studyPackRepository.saveAndFlush(pack);
         try {
             generationService.generate(pack.getId());
@@ -228,7 +241,18 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
         if (!attempt.getStudyPackId().equals(studyPackId)) {
             throw new NotFoundException("That examination could not be found.");
         }
+        return gradeAndSubmit(attempt, ownerId, submission);
+    }
+
+    @Override
+    @Transactional
+    public QuizResultDto submitExamAttempt(UUID attemptId, UUID ownerId, QuizSubmissionDto submission) {
+        return gradeAndSubmit(requireOwnedAttempt(attemptId, ownerId), ownerId, submission);
+    }
+
+    private QuizResultDto gradeAndSubmit(QuizAttempt attempt, UUID ownerId, QuizSubmissionDto submission) {
         if (attempt.getStatus() == AttemptStatus.SUBMITTED) {
+            // Idempotent: a double-click or a timer race must not turn into an error page.
             return buildResult(attempt);
         }
         List<QuizAttemptAnswer> rows = attemptAnswerRepository.findByAttemptIdOrderByPositionAsc(attempt.getId());
@@ -266,8 +290,11 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
         attemptAnswerRepository.saveAll(rows);
         // Trust the server clock, not the hidden form field: the browser value is spoofable and is lost
         // when the exam page is reloaded.
-        int elapsed = (int) Math.max(0, Duration.between(attempt.getStartedAt(), Instant.now()).getSeconds());
-        int timeTaken = Math.min(elapsed, attempt.getDurationSeconds() + SUBMIT_GRACE_SECONDS);
+        int serverElapsed = (int) Math.max(0,
+                Duration.between(attempt.getStartedAt(), Instant.now()).getSeconds());
+        int reported = Math.max(0, submission.timeTakenSeconds());
+        int timeTaken = Math.min(attempt.getDurationSeconds() + SUBMIT_GRACE_SECONDS,
+                Math.max(serverElapsed, reported));
         attempt.submit(score, timeTaken);
         attemptRepository.save(attempt);
         return buildResult(attempt);
@@ -344,13 +371,18 @@ public class StudyPackApplicationServiceImpl implements StudyPackApplicationServ
         if (message.isBlank()) {
             throw new ValidationException("Type a question for the tutor.");
         }
-        StudyPackDto dto = toDto(pack, ownerId);
-        TutorAnswerDto answer = tutorService.answer(ownerId, dto, message);
-        // Persist the exchange only once the model has answered. Saving the question first left an
-        // unanswered student message behind on every failure and duplicated it on each retry.
-        tutorMessageRepository.save(TutorMessageEntity.user(ownerId, studyPackId, message));
-        tutorMessageRepository.save(TutorMessageEntity.assistant(ownerId, studyPackId, answer.answer(),
-                answer.sources()));
+        // Pass ids rather than a DTO: building the DTO runs several extra queries (flashcards, questions
+        // and document status) that the tutor does not need.
+        TutorAnswerDto answer = tutorService.answer(ownerId, pack.getId(), pack.getDocumentId(), message);
+        // Persist the exchange only once the model has answered, atomically, so a failure never leaves an
+        // orphan student message. The assistant timestamp is forced after the question so the ascending
+        // history order stays deterministic even when the clock resolves both writes to the same instant.
+        Instant askedAt = Instant.now();
+        transactionTemplate.executeWithoutResult(status -> {
+            tutorMessageRepository.save(TutorMessageEntity.user(ownerId, studyPackId, message, askedAt));
+            tutorMessageRepository.save(TutorMessageEntity.assistant(ownerId, studyPackId, answer.answer(),
+                    answer.sources(), askedAt.plusMillis(1)));
+        });
         return answer;
     }
 

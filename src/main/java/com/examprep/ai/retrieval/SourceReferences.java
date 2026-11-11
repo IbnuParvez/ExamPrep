@@ -20,6 +20,8 @@ import com.examprep.api.dto.DocumentChunk;
 public final class SourceReferences {
 
     private static final Pattern REFERENCE = Pattern.compile("\\bc\\d+\\b", Pattern.CASE_INSENSITIVE);
+    /** flashcards.source_ref and questions.source_ref are VARCHAR(200) in the database. */
+    private static final int MAX_LABEL_CHARS = 200;
 
     private final Map<String, String> labels;
 
@@ -39,10 +41,17 @@ public final class SourceReferences {
         return labels.containsKey(normalize(refId));
     }
 
-    /** Resolves one value that may contain multiple reference IDs into display labels. */
+    /**
+     * Resolves one value that may contain multiple reference IDs into display labels, capped at the
+     * stored column width so multi-chunk DOCX section labels never overflow {@code VARCHAR(200)}.
+     */
     public String resolveToLabel(String value) {
         List<String> resolved = resolveAll(List.of(value == null ? "" : value));
-        return resolved.isEmpty() ? null : String.join(", ", resolved);
+        if (resolved.isEmpty()) {
+            return null;
+        }
+        String label = String.join(", ", resolved);
+        return label.length() <= MAX_LABEL_CHARS ? label : label.substring(0, MAX_LABEL_CHARS).strip();
     }
 
     /** Resolves reference IDs to distinct location labels, dropping fabricated ones. */

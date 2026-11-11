@@ -7,8 +7,8 @@
 ```
 
 The tests start a real PostgreSQL instance from embedded binaries (Zonky) and run Flyway plus Hibernate
-schema validation against it. No local database is needed, and **no Gemini API key is required** — AI calls
-are replaced by a mocked `GeminiGateway`.
+schema validation against it. No local database is needed, and **no FreeLLMAPI key is required** — AI calls
+are replaced by a mocked `AiGateway` (the gateway itself is tested against a local `HttpServer`).
 
 Docker Compose startup is a separate manual check (see the README); automated tests do not require Docker.
 
@@ -28,18 +28,19 @@ Docker Compose startup is a separate manual check (see the README); automated te
 | --- | --- |
 | `AuthFlowIntegrationTest` | public landing/auth pages, protected redirects, registration + BCrypt hash + auto sign-in, duplicate email, password mismatch, valid/invalid login, logout invalidates session |
 | `DocumentWorkflowIntegrationTest` | TXT upload → async extraction → `READY`, chunk references and labels, ownership isolation (service and HTTP), document pages render, unsupported upload rejected, image-only text fails with a clear message, deletion |
-| `StudyWorkflowIntegrationTest` | mocked structured Gemini response → package persisted (topics, notes, definitions, formulas, flashcards, questions), every study page renders, exam start excludes answers from HTML, submission scores 3/4 deterministically, results page, resubmission/idempotency, practice reveal, tutor answer with validated sources and persisted history, flashcard review endpoint |
-| `AiConfigurationIntegrationTest` | missing `GOOGLE_API_KEY` produces an actionable error, generation stores `FAILED` with the configuration explanation and does not fabricate content, tutor refuses a non-ready package |
+| `StudyWorkflowIntegrationTest` | mocked structured AI response → package persisted (topics, notes, definitions, formulas, flashcards, questions), every study page renders, exam start excludes answers from HTML, submission scores 3/4 deterministically, results page, resubmission/idempotency, practice reveal, tutor answer with validated sources and persisted history, flashcard review endpoint |
+| `AiConfigurationIntegrationTest` | missing `FREELLMAPI_API_KEY` produces an actionable error, generation stores `FAILED` with the configuration explanation and does not fabricate content, tutor refuses a non-ready package |
 
 ### AI failure handling
 
-The gateway maps provider failures to safe messages and retries transient conditions (429, 5xx, timeouts)
-with exponential backoff. Malformed JSON triggers exactly one repair request, then a stored `FAILED` status.
-Automated tests never make paid API calls.
+The gateway maps provider failures to safe messages and retries transient conditions (408, 5xx, timeouts and
+empty completions) with exponential backoff, while a rejected key or exhausted quota fails immediately.
+Malformed JSON triggers exactly one repair request, then a stored `FAILED` status. Automated tests never make
+paid API calls.
 
 ## Not covered automatically
 
-- **Live Gemini behaviour** (model availability, real latency, quota). This requires the owner's API key;
+- **Live router behaviour** (model availability, real latency, quota). This requires the owner's proxy key;
   see the manual smoke test below.
 - **Docker image build and Compose startup** locally (the GitHub Actions workflow builds the image after
   tests pass).
@@ -48,9 +49,9 @@ Automated tests never make paid API calls.
 - **Tablet/mobile visual review** — the layout uses responsive breakpoints at 960px and 720px; a manual
   visual pass is recommended before a public launch.
 
-## Manual Gemini smoke test
+## Manual FreeLLMAPI smoke test
 
-With `GOOGLE_API_KEY` set and a real document:
+With `FREELLMAPI_API_KEY` set and a real document:
 
 1. Upload a text-based PDF or DOCX; confirm it becomes `READY` with page/slide labels.
 2. Generate a study package; confirm progress advances and the package becomes `READY`.

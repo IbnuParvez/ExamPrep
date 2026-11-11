@@ -30,15 +30,13 @@ public class StudyPackageSanitizer {
     private static final int MAX_FORMULAS = 25;
     private static final int MAX_FLASHCARDS = 60;
     private static final int MAX_QUESTIONS = 60;
-    /** A mock examination needs at least this many auto-scored (multiple-choice or true/false) questions. */
-    private static final int MIN_EXAM_ELIGIBLE_QUESTIONS = 4;
     /** flashcards.source_ref and questions.source_ref are VARCHAR(200) in the database. */
     private static final int MAX_SOURCE_LABEL = 200;
 
     public GeneratedStudyPackage sanitize(GeneratedStudyPackage raw, SourceReferences references,
                                           StudyPreferences preferences, String fallbackTitle) {
         if (raw == null) {
-            throw new AiResponseException("Gemini returned no study material. Please generate the package again.");
+            throw new AiResponseException("The AI service returned no study material. Please generate the package again.");
         }
         String title = clean(raw.title(), 300);
         String introduction = clean(raw.introduction(), 4000);
@@ -159,23 +157,17 @@ public class StudyPackageSanitizer {
         }
 
         if (topics.isEmpty() && sections.isEmpty() && flashcards.isEmpty() && questions.isEmpty()) {
-            throw new AiResponseException("Gemini's response did not contain usable study material. "
+            throw new AiResponseException("The AI response did not contain usable study material. "
                     + "Please generate the package again.");
         }
         if (questions.isEmpty()) {
             // Practice and mock examination need questions; this is not a usable study package.
-            throw new AiResponseException("Gemini did not return any valid practice questions. "
+            throw new AiResponseException("The AI service did not return any valid practice questions. "
                     + "Please generate the package again.");
         }
-        long examEligible = questions.stream()
-                .filter(question -> parseType(question.type()) != QuestionType.SHORT_ANSWER)
-                .count();
-        if (examEligible < MIN_EXAM_ELIGIBLE_QUESTIONS) {
-            // startExam() refuses fewer than four auto-scored questions, so such a package would be READY
-            // yet permanently unable to run a mock examination.
-            throw new AiResponseException("Gemini returned too few multiple-choice or true/false questions "
-                    + "for a mock examination. Please generate the package again.");
-        }
+        // Keep as few as one valid question: startExam() already refuses to begin a mock examination
+        // without four auto-scored questions, so rejecting a package here only hid usable practice
+        // material behind a generation failure.
         return new GeneratedStudyPackage(
                 title == null ? fallbackTitle : title,
                 introduction == null ? "" : introduction,

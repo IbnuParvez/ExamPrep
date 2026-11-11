@@ -141,6 +141,14 @@ public class StudyPack {
         failureReason = null;
     }
 
+    /** Re-queues a FAILED package for generation, reusing the preferences stored on it. */
+    public void resetForRetry() {
+        status = StudyPackStatus.QUEUED;
+        progressMessage = "Waiting to start";
+        progressPercent = 5;
+        failureReason = null;
+    }
+
     public void markReady() {
         status = StudyPackStatus.READY;
         progressMessage = "Study package ready";

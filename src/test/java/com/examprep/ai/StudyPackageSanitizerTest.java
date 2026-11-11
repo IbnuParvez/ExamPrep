@@ -79,16 +79,18 @@ class StudyPackageSanitizerTest {
     }
 
     @Test
-    void rejectsPackagesThatCouldNotRunAMockExamination() {
+    void keepsPackagesWithAsFewAsOneValidQuestion() {
+        // startExam() refuses to begin without four auto-scored questions, but a package with fewer is
+        // still useful practice material and must not fail generation.
         GeneratedStudyPackage raw = withQuestions("Demand and supply", List.of(
                 new GeneratedStudyPackage.Flashcard("Question?", "Answer", "c1")),
                 List.of(mcq("Only one auto-scored question?", List.of("A", "B"), 0, "c1"),
                         new GeneratedStudyPackage.Question("SHORT_ANSWER", "Explain elasticity.", List.of(),
                                 null, null, "Responsiveness.", "Define it.", "HARD", "c1")));
 
-        assertThatThrownBy(() -> sanitizer.sanitize(raw, references, preferences, "Fallback"))
-                .isInstanceOf(AiResponseException.class)
-                .hasMessageContaining("mock examination");
+        GeneratedStudyPackage clean = sanitizer.sanitize(raw, references, preferences, "Fallback");
+
+        assertThat(clean.questions()).hasSize(2);
     }
 
     @Test
@@ -98,6 +100,20 @@ class StudyPackageSanitizerTest {
         GeneratedStudyPackage clean = sanitizer.sanitize(
                 packageWith(mcq("What happens to price when supply is fixed and demand rises?",
                         List.of("Increase", "Increase", "Decrease", "No change"), 2, "c1")),
+                references, preferences, "Fallback");
+
+        GeneratedStudyPackage.Question question = clean.questions().get(0);
+        assertThat(question.options()).containsExactly("Increase", "Decrease", "No change");
+        assertThat(question.correctOptionIndex()).isEqualTo(1);
+        assertThat(question.options().get(question.correctOptionIndex())).isEqualTo("Decrease");
+    }
+
+    @Test
+    void remapsCorrectIndexWhenBlankOptionsAreRemovedBeforeTheAnswer() {
+        // The blank option at index 1 disappears, so an answer stored at raw index 2 must move to 1.
+        GeneratedStudyPackage clean = sanitizer.sanitize(
+                packageWith(mcq("What happens to price when demand rises?",
+                        java.util.Arrays.asList("Increase", "   ", "Decrease", "No change"), 2, "c1")),
                 references, preferences, "Fallback");
 
         GeneratedStudyPackage.Question question = clean.questions().get(0);

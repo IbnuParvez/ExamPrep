@@ -1,14 +1,16 @@
 package com.examprep.ai.service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.examprep.ai.client.GeminiGateway;
-import com.examprep.ai.client.GeminiPrompt;
+import com.examprep.ai.client.AiGateway;
+import com.examprep.ai.client.AiPrompt;
 import com.examprep.ai.dto.GeneratedStudyPackage;
 import com.examprep.ai.dto.SegmentAnalysis;
 import com.examprep.ai.exception.AiResponseException;
@@ -32,13 +34,15 @@ public class StudyPackageGenerator {
 
     /** How much of an unusable previous answer is shown to the model when asking for a repair. */
     private static final int REPAIR_PREVIEW_CHARS = 8_000;
+    /** Segment analyses are short; a smaller ceiling leaves more of the budget for the final answer. */
+    private static final int SEGMENT_MAX_OUTPUT_TOKENS = 4_096;
 
-    private final GeminiGateway gateway;
+    private final AiGateway gateway;
     private final StudyPackageSanitizer sanitizer;
     private final ObjectMapper objectMapper;
     private final AiProperties properties;
 
-    public StudyPackageGenerator(GeminiGateway gateway, StudyPackageSanitizer sanitizer,
+    public StudyPackageGenerator(AiGateway gateway, StudyPackageSanitizer sanitizer,
                                  ObjectMapper objectMapper, AiProperties properties) {
         this.gateway = gateway;
         this.sanitizer = sanitizer;
@@ -55,7 +59,7 @@ public class StudyPackageGenerator {
         SourceReferences references = SourceReferences.from(chunks);
         // Excerpts are sampled across the whole document, not just its first pages: the segment analysis
         // covers every chunk, and the system prompt forbids using facts outside the supplied excerpts.
-        List<DocumentChunk> promptChunks = selectAcrossDocument(chunks, properties.getMaxSourceChars());
+        List<DocumentChunk> promptChunks = selectChunksWithinBudget(chunks, properties.getMaxSourceChars());
 
         String analysis = "";
         if (context.totalChars() > properties.getMaxSourceChars()) {
@@ -79,14 +83,13 @@ public class StudyPackageGenerator {
      */
     private GeneratedStudyPackage generatePackage(String prompt, SourceReferences references,
                                                   StudyPreferences preferences, String fallbackTitle) {
-        String raw = gateway.generate(GeminiPrompt.json(Prompts.SYSTEM_INSTRUCTION, prompt,
+        String raw = gateway.generate(AiPrompt.json(Prompts.SYSTEM_INSTRUCTION, prompt,
                 properties.getMaxOutputTokens()));
         try {
             return sanitizer.sanitize(parse(raw, GeneratedStudyPackage.class), references, preferences, fallbackTitle);
         } catch (AiResponseException unusable) {
-            log.warn("Gemini returned study material that could not be used ({}); requesting one repair",
-                    unusable.getMessage());
-            String repaired = gateway.generate(GeminiPrompt.json(Prompts.SYSTEM_INSTRUCTION,
+            log.warn("The AI returned study material that could not be used; requesting one repair");
+            String repaired = gateway.generate(AiPrompt.json(Prompts.SYSTEM_INSTRUCTION,
                     repairPrompt(raw, unusable.getMessage()), properties.getMaxOutputTokens()));
             return sanitizer.sanitize(parse(repaired, GeneratedStudyPackage.class), references, preferences,
                     fallbackTitle);
@@ -101,7 +104,8 @@ public class StudyPackageGenerator {
             reporter.report("Analysing section " + (index + 1) + " of " + segments.size(),
                     20 + (int) (35.0 * index / Math.max(1, segments.size())));
             String prompt = Prompts.segmentAnalysisPrompt(context.title(), Prompts.renderSources(segment));
-            SegmentAnalysis analysis = generateJson(Prompts.SYSTEM_INSTRUCTION, prompt, SegmentAnalysis.class);
+            SegmentAnalysis analysis = generateJson(Prompts.SYSTEM_INSTRUCTION, prompt, SegmentAnalysis.class,
+                    SEGMENT_MAX_OUTPUT_TOKENS);
             combined.append("- Section ").append(index + 1).append(": ")
                     .append(analysis.summary() == null ? "" : analysis.summary().strip()).append('\n');
             if (analysis.keyPoints() != null) {
@@ -139,24 +143,40 @@ public class StudyPackageGenerator {
     }
 
     /**
-     * Selects excerpts across the entire document within the character budget. Taking only the first
-     * chunks used to starve the back half of any document longer than the budget.
+     * Selects excerpts evenly across the entire document within the character budget, keeping them in
+     * ascending order. Taking only the leading chunks used to starve the back half of any document
+     * longer than the budget, so questions came only from the first few pages.
      */
-    static List<DocumentChunk> selectAcrossDocument(List<DocumentChunk> chunks, int maxChars) {
-        int total = 0;
+    public static List<DocumentChunk> selectChunksWithinBudget(List<DocumentChunk> chunks, int maxChars) {
+        if (chunks == null || chunks.isEmpty()) {
+            return new ArrayList<>();
+        }
+        int budget = Math.max(1, maxChars);
+        long total = 0;
         for (DocumentChunk chunk : chunks) {
             total += chunk.text().length();
         }
-        if (total <= maxChars) {
+        if (total <= budget) {
             return new ArrayList<>(chunks);
         }
-        int stride = Math.max(1, (int) Math.ceil((double) total / Math.max(1, maxChars)));
+        double averageChunk = Math.max(1.0, (double) total / chunks.size());
+        int targetCount = Math.max(1, Math.min(chunks.size(), (int) Math.floor(budget / averageChunk)));
+
+        Set<Integer> indices = new LinkedHashSet<>();
+        if (targetCount == 1) {
+            indices.add(0);
+        } else {
+            for (int position = 0; position < targetCount; position++) {
+                indices.add((int) Math.round((double) position * (chunks.size() - 1) / (targetCount - 1)));
+            }
+        }
+
         List<DocumentChunk> selected = new ArrayList<>();
         int used = 0;
-        for (int index = 0; index < chunks.size(); index += stride) {
+        for (int index : indices) {
             DocumentChunk chunk = chunks.get(index);
             int size = chunk.text().length();
-            if (used + size > maxChars) {
+            if (used + size > budget) {
                 continue;
             }
             selected.add(chunk);
@@ -169,14 +189,14 @@ public class StudyPackageGenerator {
     }
 
     /** Requests JSON and repairs a malformed response exactly once. Raw completions are never logged. */
-    private <T> T generateJson(String systemInstruction, String prompt, Class<T> type) {
-        String raw = gateway.generate(GeminiPrompt.json(systemInstruction, prompt, properties.getMaxOutputTokens()));
+    private <T> T generateJson(String systemInstruction, String prompt, Class<T> type, int maxOutputTokens) {
+        String raw = gateway.generate(AiPrompt.json(systemInstruction, prompt, maxOutputTokens));
         try {
             return parse(raw, type);
         } catch (AiResponseException firstFailure) {
-            log.warn("Gemini returned malformed JSON; requesting one repair attempt");
-            String repaired = gateway.generate(GeminiPrompt.json(systemInstruction,
-                    repairPrompt(raw, "the response was not a valid JSON object"), properties.getMaxOutputTokens()));
+            log.warn("The AI returned malformed JSON; requesting one repair attempt");
+            String repaired = gateway.generate(AiPrompt.json(systemInstruction,
+                    repairPrompt(raw, "the response was not a valid JSON object"), maxOutputTokens));
             return parse(repaired, type);
         }
     }
@@ -214,18 +234,18 @@ public class StudyPackageGenerator {
         try {
             T value = objectMapper.readValue(candidate, type);
             if (value == null) {
-                throw new AiResponseException("Gemini returned an empty JSON document.");
+                throw new AiResponseException("The AI service returned an empty JSON document.");
             }
             return value;
         } catch (JsonProcessingException exception) {
-            throw new AiResponseException("Gemini returned a response that could not be validated. "
+            throw new AiResponseException("The AI service returned a response that could not be validated. "
                     + "Please try generating the study package again.", exception);
         }
     }
 
     static String extractJson(String raw) {
         if (raw == null) {
-            throw new AiResponseException("Gemini returned no content.");
+            throw new AiResponseException("The AI service returned no content.");
         }
         String cleaned = raw.strip();
         if (cleaned.startsWith("```")) {
@@ -238,7 +258,7 @@ public class StudyPackageGenerator {
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');
         if (start < 0 || end <= start) {
-            throw new AiResponseException("Gemini did not return a JSON object.");
+            throw new AiResponseException("The AI service did not return a JSON object.");
         }
         return cleaned.substring(start, end + 1);
     }

@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.examprep.ai.exception.AiRateLimitException;
 import com.examprep.ai.exception.AiResponseException;
 import com.examprep.ai.exception.AiServiceException;
 import com.examprep.ai.exception.AiUnavailableException;
-import com.google.genai.errors.ApiException;
 import com.examprep.common.AppException;
 import com.examprep.common.ForbiddenOperationException;
 import com.examprep.common.NotFoundException;
@@ -89,7 +89,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public Object handleUnexpected(Exception exception, HttpServletRequest request, HttpServletResponse response) {
+    public Object handleUnexpected(Exception exception, HttpServletRequest request,
+                                   HttpServletResponse response) throws Exception {
+        // Security exceptions must reach the security filter chain so it can redirect to sign-in or
+        // render the access-denied page instead of a generic 500.
+        if (exception instanceof AccessDeniedException || exception instanceof AuthenticationException) {
+            throw exception;
+        }
         log.error("Unexpected error while handling {}", request.getRequestURI(), exception);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         response.setStatus(status.value());
@@ -127,24 +133,13 @@ public class GlobalExceptionHandler {
         if (exception instanceof ValidationException) {
             return HttpStatus.BAD_REQUEST;
         }
-        if (exception instanceof AiServiceException aiService) {
-            // An upstream rate limit is not the student's mistake, and neither is an upstream outage.
-            return upstreamStatus(aiService) == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_GATEWAY;
+        if (exception instanceof AiRateLimitException) {
+            // An upstream quota/rate limit is not the student's mistake.
+            return HttpStatus.TOO_MANY_REQUESTS;
         }
-        if (exception instanceof AiResponseException) {
+        if (exception instanceof AiServiceException || exception instanceof AiResponseException) {
             return HttpStatus.BAD_GATEWAY;
         }
         return HttpStatus.BAD_REQUEST;
-    }
-
-    private int upstreamStatus(Throwable failure) {
-        Throwable current = failure;
-        while (current != null) {
-            if (current instanceof ApiException apiFailure) {
-                return apiFailure.code();
-            }
-            current = current.getCause();
-        }
-        return -1;
     }
 }

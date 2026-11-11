@@ -134,7 +134,7 @@ public final class Prompts {
                 - Do not include markdown, HTML or code fences in any text field.
                 """.formatted(documentTitle, preferencesSummary(preferences), analysisBlock, sources,
                 preferences.flashcardCount(), preferences.questionCount(),
-                Math.max(1, preferences.examQuestionCount()));
+                Math.max(4, preferences.examQuestionCount()));
     }
 
     public static String segmentAnalysisPrompt(String documentTitle, String sources) {

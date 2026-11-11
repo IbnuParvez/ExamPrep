@@ -84,7 +84,7 @@ public class StudyController {
     @PostMapping("/{studyPackId}/retry")
     public String retry(@PathVariable UUID studyPackId, RedirectAttributes redirectAttributes) {
         UUID ownerId = currentUserService.requireCurrentUserId();
-        studyPackService.retry(studyPackId, ownerId);
+        studyPackService.retryGeneration(studyPackId, ownerId);
         redirectAttributes.addFlashAttribute("notice", "Generating the study package again.");
         return "redirect:/study/" + studyPackId;
     }

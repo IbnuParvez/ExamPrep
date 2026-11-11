@@ -11,6 +11,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
@@ -24,8 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.examprep.ai.client.GeminiGateway;
-import com.examprep.ai.client.GeminiPrompt;
+import com.examprep.ai.client.AiGateway;
+import com.examprep.ai.client.AiPrompt;
+import com.examprep.ai.exception.AiServiceException;
 import com.examprep.api.DocumentApplicationService;
 import com.examprep.api.StudyPackApplicationService;
 import com.examprep.api.UserRegistrationService;
@@ -111,7 +113,7 @@ class StudyWorkflowIntegrationTest extends AbstractIntegrationTest {
             """;
 
     @MockitoBean
-    private GeminiGateway geminiGateway;
+    private AiGateway aiGateway;
 
     @Autowired
     private DocumentApplicationService documentService;
@@ -123,9 +125,9 @@ class StudyWorkflowIntegrationTest extends AbstractIntegrationTest {
     private UserRegistrationService registrationService;
 
     @BeforeEach
-    void mockGemini() {
-        when(geminiGateway.generate(any(GeminiPrompt.class))).thenAnswer(invocation -> {
-            GeminiPrompt prompt = invocation.getArgument(0);
+    void mockAi() {
+        when(aiGateway.generate(any(AiPrompt.class))).thenAnswer(invocation -> {
+            AiPrompt prompt = invocation.getArgument(0);
             return prompt.userPrompt().contains("Student question:") ? TUTOR_JSON : PACKAGE_JSON;
         });
     }
@@ -251,6 +253,62 @@ class StudyWorkflowIntegrationTest extends AbstractIntegrationTest {
                 .isInstanceOf(com.examprep.common.NotFoundException.class);
         assertThatThrownBy(() -> studyPackService.tutorHistory(pack.id(), stranger.id()))
                 .isInstanceOf(com.examprep.common.NotFoundException.class);
+    }
+
+    @Test
+    void retryRecoversAFailedStudyPack() throws Exception {
+        UserAccountDto owner = register("Retry");
+        UUID documentId = uploadAndAwaitReady(owner);
+        // The first generation fails; the retry must be able to recover it to READY.
+        when(aiGateway.generate(any(AiPrompt.class)))
+                .thenThrow(new AiServiceException("The AI router was unavailable."))
+                .thenAnswer(invocation -> PACKAGE_JSON);
+
+        StudyPackCreationResult creation = studyPackService.create(documentId, owner.id(),
+                StudyPreferences.defaults());
+        await(Duration.ofSeconds(20), () ->
+                studyPackService.getStatus(creation.studyPackId(), owner.id()).status() == StudyPackStatus.FAILED);
+
+        mockMvc.perform(post("/study/" + creation.studyPackId() + "/retry")
+                        .with(user(securityUser(owner))).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/study/" + creation.studyPackId()));
+
+        await(Duration.ofSeconds(30), () ->
+                studyPackService.getStatus(creation.studyPackId(), owner.id()).status() == StudyPackStatus.READY);
+        assertThat(studyPackService.getStudyPack(creation.studyPackId(), owner.id()).flashcards()).isNotEmpty();
+    }
+
+    @Test
+    void failedTutorCallLeavesNoOrphanUserMessage() throws Exception {
+        UserAccountDto owner = register("Tutor");
+        StudyPackDto pack = generateAndAwaitReady(owner, uploadAndAwaitReady(owner));
+        when(aiGateway.generate(any(AiPrompt.class)))
+                .thenThrow(new AiServiceException("The AI router was unavailable."));
+
+        mockMvc.perform(post("/api/study/" + pack.id() + "/tutor")
+                        .with(user(securityUser(owner))).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"message\":\"What does elasticity measure?\"}"))
+                .andExpect(status().isBadGateway());
+
+        // The question must not be persisted when the tutor never answered it.
+        assertThat(studyPackService.tutorHistory(pack.id(), owner.id())).isEmpty();
+    }
+
+    @Test
+    void resubmittingAnExamRedirectsToResultsInsteadOfFailing() throws Exception {
+        UserAccountDto owner = register("Resubmit");
+        StudyPackDto pack = generateAndAwaitReady(owner, uploadAndAwaitReady(owner));
+        ExamSessionDto exam = studyPackService.startExam(pack.id(), owner.id());
+
+        for (int submission = 0; submission < 2; submission++) {
+            mockMvc.perform(post("/exam/" + exam.attemptId() + "/submit")
+                            .with(user(securityUser(owner))).with(csrf())
+                            .param("timeTaken", "30"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/exam/" + exam.attemptId() + "/results"));
+        }
     }
 
     private StudyPackDto generateAndAwaitReady(UserAccountDto owner, UUID documentId) {

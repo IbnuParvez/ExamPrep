@@ -4,7 +4,7 @@
 
 ExamPrep is a modular monolith. A single Spring Boot 3.5 process serves the Thymeleaf interface, the JSON
 endpoints used by browser interactions, background processing and all persistence. PostgreSQL is the only
-external stateful dependency; Gemini is the only external service.
+external stateful dependency; the self-hosted FreeLLMAPI router is the only external service.
 
 ```
 Browser (Thymeleaf pages + vanilla JS)
@@ -15,7 +15,7 @@ web/ controllers ──────────────► api/ application 
                      ┌──────────────────┼───────────────────┐
                      ▼                  ▼                   ▼
                 document/             study/               ai/
-          validation, storage,   packages, cards,     Gemini gateway, prompts,
+          validation, storage,   packages, cards,     FreeLLMAPI gateway, prompts,
           extraction, chunking   questions, exams,    structured generation,
                                  tutor, progress      retrieval, validation
                      │                  │                   │
@@ -24,7 +24,7 @@ web/ controllers ──────────────► api/ application 
                                   PostgreSQL
 ```
 
-Module boundaries are Java packages, not services. Controllers never touch repositories or the Gemini SDK;
+Module boundaries are Java packages, not services. Controllers never touch repositories or the AI HTTP client;
 they call the interfaces in `com.examprep.api`. The AI package knows about documents only through
 `DocumentApplicationService`, which returns validated `DocumentContext` chunks.
 
@@ -58,8 +58,9 @@ they call the interfaces in `com.examprep.api`. The AI package knows about docum
 schedules `StudyGenerationService`:
 
 1. Load `DocumentContext` (all chunks with real labels).
-2. If the document exceeds the source budget, split it into segments, analyse each with Gemini and build a
-   combined brief. This avoids one enormous request.
+2. If the document exceeds the source budget, excerpts are sampled evenly across the whole document, and
+   the document is split into segments that are analysed separately with the AI router; the analyses are
+   then combined into a brief. This avoids one enormous request while keeping back-half coverage.
 3. Send one structured JSON request (system instruction + preferences + chunks + section analyses).
 4. Parse with Jackson; on malformed output, request one repair pass, then fail with a stored explanation.
 5. `StudyPackageSanitizer` validates every field:
@@ -116,7 +117,7 @@ keys with `ON DELETE CASCADE` give clean ownership deletion.
   indistinguishable from a missing one.
 - Exam attempts are loaded by `id + owner`, and the attempt's package ID must match the requested package.
 - Long AI calls are never wrapped in a database transaction; state is written in small steps so progress is
-  visible and no connection is held during an HTTP request to Gemini.
+  visible and no connection is held during an HTTP request to the AI router.
 - Processing updates are idempotent (delete-then-insert for generated resources).
 
 ## Security
@@ -128,7 +129,8 @@ keys with `ON DELETE CASCADE` give clean ownership deletion.
   guard, private directory.
 - Prompts explicitly treat document text as untrusted study material; the system instruction is the only
   source of AI policy. Output is validated before persistence and rendering.
-- The Gemini key is read from the environment, held by the SDK client and never logged or exposed.
+- The FreeLLMAPI proxy key is read from the environment, held by the shared HTTP client and never logged
+  or exposed.
 - Errors shown to students are app-authored messages; stack traces stay in server logs.
 
 ## Deliberate simplifications
