@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-/** Raw structure returned by Gemini before validation. Source fields hold chunk reference IDs. */
+/** Raw structure returned by the AI router before validation. Source fields hold chunk reference IDs. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GeneratedStudyPackage(
         String title,

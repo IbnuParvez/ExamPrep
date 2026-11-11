@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 
-import com.examprep.ai.config.GeminiClientFactory;
+import com.examprep.ai.config.FreeLlmApiClientFactory;
 import com.examprep.ai.exception.AiUnavailableException;
 import com.examprep.ai.retrieval.SourceReferences;
 import com.examprep.api.DocumentApplicationService;
@@ -45,11 +45,11 @@ class AiConfigurationIntegrationTest extends AbstractIntegrationTest {
     void missingApiKeyThrowsAnActionableConfigurationError() {
         AiProperties properties = new AiProperties();
         properties.setApiKey("");
-        GeminiClientFactory factory = new GeminiClientFactory(properties);
+        FreeLlmApiClientFactory factory = new FreeLlmApiClientFactory(properties);
 
         assertThatThrownBy(factory::client)
                 .isInstanceOf(AiUnavailableException.class)
-                .hasMessageContaining("GOOGLE_API_KEY");
+                .hasMessageContaining("FREELLMAPI_API_KEY");
     }
 
     @Test
@@ -73,7 +73,7 @@ class AiConfigurationIntegrationTest extends AbstractIntegrationTest {
                 studyPackService.getStatus(creation.studyPackId(), owner.id()).status() == StudyPackStatus.FAILED);
 
         assertThat(studyPackService.getStatus(creation.studyPackId(), owner.id()).errorMessage())
-                .contains("GOOGLE_API_KEY");
+                .contains("FREELLMAPI_API_KEY");
 
         StudyPackDto pack = studyPackService.getStudyPack(creation.studyPackId(), owner.id());
         assertThat(pack.flashcards()).isEmpty();

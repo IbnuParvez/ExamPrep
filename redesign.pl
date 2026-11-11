@@ -845,7 +845,7 @@ my $LAYOUT = <<'__LAYOUT__';
         <div class="footer-inner">
             <div>
                 <p class="footer-brand">ExamPrep</p>
-                <p class="footer-note">Study material is processed with Google&rsquo;s Gemini API. Review generated
+                <p class="footer-note">Study material is processed by a self-hosted AI router (FreeLLMAPI). Review generated
                     content against your course materials before relying on it.</p>
             </div>
             <nav class="footer-nav" aria-label="Secondary">
@@ -915,13 +915,13 @@ my $INDEX = <<'__INDEX__';
                     <div>
                         <p class="promise-title">Privacy promise</p>
                         <p>Your documents stay private to your account. Extracted text is sent to Google&rsquo;s
-                            Gemini API only to generate your study material. You can delete them at any time.</p>
+                            AI router (FreeLLMAPI) only to generate your study material. You can delete them at any time.</p>
                     </div>
                 </aside>
 
                 <div class="alert alert-warning" th:if="${!aiConfigured}">
                     <span class="alert-title">AI is not configured on this server yet</span>
-                    An administrator needs to set <span class="mono">GOOGLE_API_KEY</span>. You can still register,
+                    An administrator needs to set <span class="mono">FREELLMAPI_API_KEY</span>. You can still register,
                     upload and extract documents, but study generation and the tutor will report a configuration
                     error until it is set.
                 </div>
@@ -1182,7 +1182,7 @@ my $PRIVACY = <<'__PRIVACY__';
         </svg>
         <div>
             <p class="promise-title">Privacy promise</p>
-            <p>Your documents stay private to your account. Extracted text is sent to Google&rsquo;s Gemini API
+            <p>Your documents stay private to your account. Extracted text is sent to a self-hosted AI router (FreeLLMAPI)
                 only to generate your study material or answer a tutor question. You can delete documents and
                 study packages at any time.</p>
         </div>
@@ -1196,9 +1196,9 @@ my $PRIVACY = <<'__PRIVACY__';
                 generated for you. Uploaded files are kept in private storage and are never served from a public
                 URL.</p>
 
-            <h2>How Google Gemini is used</h2>
-            <p>To generate study material, relevant extracted text from your document is sent to Google&rsquo;s
-                Gemini API, along with your study preferences. The API key stays on the server and is never
+            <h2>How the AI router is used</h2>
+            <p>To generate study material, relevant extracted text from your document is sent to a self-hosted
+                AI router (FreeLLMAPI), along with your study preferences. The proxy key stays on the server and is never
                 exposed to your browser. Tutor questions are sent together with the most relevant document
                 sections so answers can be grounded in your material.</p>
             <p>ExamPrep does not send your whole document in one request when it is large: it analyses sections
@@ -1227,7 +1227,7 @@ my $PRIVACY = <<'__PRIVACY__';
             <ul>
                 <li>Documents are private to your account.</li>
                 <li>API keys never reach the browser.</li>
-                <li>Uploaded text is processed by Gemini only when you generate study material or ask the tutor.</li>
+                <li>Uploaded text is processed by the AI router only when you generate study material or ask the tutor.</li>
                 <li>You can delete documents and packages at any time.</li>
             </ul>
         </aside>

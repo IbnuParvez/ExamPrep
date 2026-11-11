@@ -43,9 +43,10 @@ public class StudyStaleJobRecovery implements ApplicationRunner {
     }
 
     private void recoverAll() {
+        // A cutoff in the near future matches every in-progress row, so all of them are recovered now.
+        Instant cutoff = Instant.now().plusSeconds(1);
         int recovered = repository.markStaleJobsFailed(StudyPackStatus.FAILED,
-                List.of(StudyPackStatus.QUEUED, StudyPackStatus.PROCESSING), Instant.now(), REASON,
-                Instant.now());
+                List.of(StudyPackStatus.QUEUED, StudyPackStatus.PROCESSING), cutoff, REASON, Instant.now());
         if (recovered > 0) {
             log.warn("Recovered {} interrupted study generation job(s) on startup", recovered);
         }

@@ -15,7 +15,7 @@ import com.examprep.api.dto.DocumentChunk;
 
 /**
  * Deliberately simple lexical retrieval: no vector database is needed for the initial release.
- * Chunks that share the most meaningful terms with the question are supplied to Gemini as context.
+ * Chunks that share the most meaningful terms with the question are supplied to the AI router as context.
  */
 @Component
 public class ChunkRetriever {

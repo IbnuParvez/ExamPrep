@@ -16,14 +16,14 @@ class StudyPackageGeneratorTest {
     void keepsEveryChunkWhenTheDocumentFitsTheBudget() {
         List<DocumentChunk> chunks = chunks(4, 100);
 
-        assertThat(StudyPackageGenerator.selectAcrossDocument(chunks, 400)).hasSize(4);
+        assertThat(StudyPackageGenerator.selectChunksWithinBudget(chunks, 400)).hasSize(4);
     }
 
     @Test
     void samplesAcrossTheWholeDocumentWhenItExceedsTheBudget() {
         List<DocumentChunk> chunks = chunks(40, 100);
 
-        List<DocumentChunk> selected = StudyPackageGenerator.selectAcrossDocument(chunks, 1_000);
+        List<DocumentChunk> selected = StudyPackageGenerator.selectChunksWithinBudget(chunks, 1_000);
 
         int characters = selected.stream().mapToInt(chunk -> chunk.text().length()).sum();
         assertThat(characters).isLessThanOrEqualTo(1_000);

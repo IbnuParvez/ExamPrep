@@ -43,14 +43,15 @@
                     </svg>
                     <div>
                         <p class="promise-title">Privacy promise</p>
-                        <p>Your documents stay private to your account. Extracted text is sent to Google&rsquo;s
-                            Gemini API only to generate your study material. You can delete them at any time.</p>
+                        <p>Your documents stay private to your account. Extracted text is sent to a self-hosted
+                            AI router (FreeLLMAPI) only to generate your study material. You can delete them at
+                            any time.</p>
                     </div>
                 </aside>
 
                 <div class="alert alert-warning" th:if="${!aiConfigured}">
                     <span class="alert-title">AI is not configured on this server yet</span>
-                    An administrator needs to set <span class="mono">GOOGLE_API_KEY</span>. You can still register,
+                    An administrator needs to set <span class="mono">FREELLMAPI_API_KEY</span>. You can still register,
                     upload and extract documents, but study generation and the tutor will report a configuration
                     error until it is set.
                 </div>

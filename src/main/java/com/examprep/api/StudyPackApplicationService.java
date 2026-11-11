@@ -32,13 +32,19 @@ public interface StudyPackApplicationService {
     void delete(UUID studyPackId, UUID ownerId);
 
     /** Re-runs generation for a failed package, reusing the preferences stored on it. */
-    StudyPackStatusDto retry(UUID studyPackId, UUID ownerId);
+    StudyPackStatusDto retryGeneration(UUID studyPackId, UUID ownerId);
 
     ExamSessionDto startExam(UUID studyPackId, UUID ownerId);
 
     ExamSessionDto getExamSession(UUID attemptId, UUID ownerId);
 
     QuizResultDto submitExam(UUID studyPackId, UUID ownerId, QuizSubmissionDto submission);
+
+    /**
+     * Grades a submission from its attempt id alone. The exam submit page uses this so a timer
+     * auto-submit racing a manual submit reaches the idempotent SUBMITTED path instead of an HTTP 400.
+     */
+    QuizResultDto submitExamAttempt(UUID attemptId, UUID ownerId, QuizSubmissionDto submission);
 
     QuizResultDto getResult(UUID attemptId, UUID ownerId);
 

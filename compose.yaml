@@ -24,18 +24,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Linux Docker Engine resolves host.docker.internal only with this mapping, so the container
+    # can reach a FreeLLMAPI router running on the host machine.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-examprep}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-examprep}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-examprep}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
-      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-240}
-      GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-2}
-      GEMINI_RETRY_BASE_DELAY_MS: ${GEMINI_RETRY_BASE_DELAY_MS:-5000}
-      GEMINI_MAX_CONCURRENT_REQUESTS: ${GEMINI_MAX_CONCURRENT_REQUESTS:-4}
-      GEMINI_MAX_OUTPUT_TOKENS: ${GEMINI_MAX_OUTPUT_TOKENS:-65536}
-      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL:-low}
+      # The same .env works locally and in Docker: localhost is the host for `spring-boot:run`, while
+      # the container reaches the self-hosted router through host.docker.internal.
+      FREELLMAPI_BASE_URL: ${FREELLMAPI_DOCKER_BASE_URL:-http://host.docker.internal:3001/v1}
+      FREELLMAPI_API_KEY: ${FREELLMAPI_API_KEY:-}
+      FREELLMAPI_MODEL: ${FREELLMAPI_MODEL:-auto}
+      FREELLMAPI_CONNECT_TIMEOUT_SECONDS: ${FREELLMAPI_CONNECT_TIMEOUT_SECONDS:-10}
+      FREELLMAPI_TIMEOUT_SECONDS: ${FREELLMAPI_TIMEOUT_SECONDS:-180}
+      FREELLMAPI_TUTOR_TIMEOUT_SECONDS: ${FREELLMAPI_TUTOR_TIMEOUT_SECONDS:-60}
+      FREELLMAPI_MAX_RETRIES: ${FREELLMAPI_MAX_RETRIES:-2}
+      FREELLMAPI_MAX_CONCURRENCY: ${FREELLMAPI_MAX_CONCURRENCY:-3}
+      FREELLMAPI_REASONING_EFFORT: ${FREELLMAPI_REASONING_EFFORT:-low}
       APP_STORAGE_LOCATION: /app/data/uploads
       APP_MAX_UPLOAD_SIZE_MB: ${APP_MAX_UPLOAD_SIZE_MB:-25}
       SERVER_PORT: 8080

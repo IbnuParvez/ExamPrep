@@ -37,7 +37,7 @@ jobs:
           ./mvnw -B -ntp -v
 
       # Integration tests start their own PostgreSQL from embedded binaries (Zonky),
-      # so no database service container or Gemini API key is required.
+      # so no database service container or FreeLLMAPI key is required.
       - name: Build and run the full test suite
         run: ./mvnw -B -ntp clean verify
 
