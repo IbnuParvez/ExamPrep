@@ -1,0 +1,7 @@
+services:
+  app:
+    networks: [default, llm]
+networks:
+  llm:
+    external: true
+    name: llm-net
