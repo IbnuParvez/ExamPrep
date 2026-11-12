@@ -36,6 +36,10 @@ and all business logic. There is no separate JavaScript frontend, no Node runtim
 
 - Student registration with validation, BCrypt password hashing and automatic sign-in.
 - Email/password login, logout, session fixation protection and CSRF on every state-changing request.
+- Profile editing (name, sign-in email, and password with current-password confirmation) that refreshes the
+  live session, so the new details appear on every page without signing in again.
+- Permanent account deletion behind a password confirmation: uploaded files are removed from private
+  storage, every owned row is deleted, and the student is signed out immediately.
 - Per-student isolation: documents, study packages, attempts and tutor conversations are scoped to the
   authenticated account; a foreign ID returns "not found" rather than exposing another student's data.
 - Private upload storage outside the web root, generated internal filenames, content-type detection.

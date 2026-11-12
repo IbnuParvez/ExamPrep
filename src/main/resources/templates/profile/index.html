@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en-GB" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Your profile — ExamPrep</title>
+</head>
+<body>
+<main>
+    <div class="page-head">
+        <p class="eyebrow">Account</p>
+        <h1>Your profile</h1>
+        <p class="lede">Change your name, your sign-in email address or your password. Changes apply across
+            ExamPrep immediately.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice != null}" th:text="${notice}">Saved.</div>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h2>Profile details</h2>
+            </div>
+        </div>
+
+        <div class="card">
+            <form class="form form-wide" th:action="@{/profile}" th:object="${form}" method="post">
+                <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                    <span class="alert-title">Please check the form</span>
+                    <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Error</p>
+                </div>
+
+                <div class="field">
+                    <label for="fullName">Full name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" autocomplete="name"
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'input-invalid'"
+                           th:attr="aria-describedby=${#fields.hasErrors('fullName')} ? 'fullName-error'">
+                    <span class="field-error" id="fullName-error" th:if="${#fields.hasErrors('fullName')}"
+                          th:errors="*{fullName}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" th:field="*{email}" autocomplete="email"
+                           th:classappend="${#fields.hasErrors('email')} ? 'input-invalid'"
+                           th:attr="aria-describedby=${#fields.hasErrors('email')} ? 'email-error'">
+                    <p class="hint">You sign in with this address, so use one you can access.</p>
+                    <span class="field-error" id="email-error" th:if="${#fields.hasErrors('email')}"
+                          th:errors="*{email}"></span>
+                </div>
+
+                <h3>Change password</h3>
+                <p class="hint">Leave these blank to keep your current password.</p>
+
+                <div class="field">
+                    <label for="currentPassword">Current password</label>
+                    <input type="password" id="currentPassword" th:field="*{currentPassword}"
+                           autocomplete="current-password"
+                           th:classappend="${#fields.hasErrors('currentPassword')} ? 'input-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('currentPassword')}"
+                          th:errors="*{currentPassword}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="newPassword">New password</label>
+                    <input type="password" id="newPassword" th:field="*{newPassword}"
+                           autocomplete="new-password"
+                           th:classappend="${#fields.hasErrors('newPassword')} ? 'input-invalid'"
+                           th:attr="aria-describedby=${#fields.hasErrors('newPassword')} ? 'newPassword-error'">
+                    <p class="hint">At least 8 characters.</p>
+                    <span class="field-error" id="newPassword-error" th:if="${#fields.hasErrors('newPassword')}"
+                          th:errors="*{newPassword}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="newPasswordConfirm">Confirm new password</label>
+                    <input type="password" id="newPasswordConfirm" th:field="*{newPasswordConfirm}"
+                           autocomplete="new-password"
+                           th:classappend="${#fields.hasErrors('newPasswordConfirm')} ? 'input-invalid'"
+                           th:attr="aria-describedby=${#fields.hasErrors('newPasswordConfirm')} ? 'newPasswordConfirm-error'">
+                    <span class="field-error" id="newPasswordConfirm-error"
+                          th:if="${#fields.hasErrors('newPasswordConfirm')}" th:errors="*{newPasswordConfirm}"></span>
+                </div>
+
+                <div class="form-actions">
+                    <button class="button" type="submit">Save changes</button>
+                    <a class="button button-secondary" th:href="@{/dashboard}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <h2>Delete account</h2>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="alert alert-danger" th:if="${deleteError != null}" th:text="${deleteError}">Error</div>
+            <p>Deleting your account permanently removes your profile, your uploaded documents and files, your
+                study packages, flashcard reviews, mock exam attempts and tutor conversations. This cannot be
+                undone, and you are signed out immediately.</p>
+
+            <form class="form form-wide" th:action="@{/profile/delete}" method="post"
+                  data-confirm="Delete your account and all of your study data? This cannot be undone.">
+                <div class="field">
+                    <label for="deletePassword">Confirm your password</label>
+                    <input type="password" id="deletePassword" name="currentPassword"
+                           autocomplete="current-password" required>
+                    <p class="hint">Your password proves this is you, not someone using your open session.</p>
+                </div>
+                <div class="form-actions">
+                    <button class="button button-danger" type="submit">Delete my account</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+</body>
+</html>

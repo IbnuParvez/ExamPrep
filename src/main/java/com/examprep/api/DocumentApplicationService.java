@@ -24,4 +24,10 @@ public interface DocumentApplicationService {
     void retryExtraction(UUID documentId, UUID ownerId);
 
     void delete(UUID documentId, UUID ownerId);
+
+    /**
+     * Removes every stored file owned by the account. The database rows go with the account's foreign
+     * keys, but the private files on disk have to be deleted while the document rows still exist.
+     */
+    void purgeStoredFiles(UUID ownerId);
 }

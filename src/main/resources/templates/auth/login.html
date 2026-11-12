@@ -19,6 +19,9 @@
         <div class="alert alert-success" th:if="${param.logout != null}">
             You have been signed out.
         </div>
+        <div class="alert alert-warning" th:if="${param.deleted != null}">
+            Your account and all of its study data have been deleted. You have been signed out.
+        </div>
         <div class="alert alert-warning" th:if="${param.expired != null}">
             Your session expired. Sign in again to continue.
         </div>
