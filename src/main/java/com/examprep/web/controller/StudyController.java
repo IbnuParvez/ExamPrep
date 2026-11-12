@@ -41,7 +41,9 @@ public class StudyController {
             return "study/generating";
         }
         model.addAttribute("tab", allowedTab(tab));
-        return "study/package";
+        // Not "study/package": maven-jar-plugin silently drops **/package.html from the jar, so the
+        // template would be missing in the packaged image while working under spring-boot:run.
+        return "study/study-package";
     }
 
     @GetMapping("/{studyPackId}/flashcards")

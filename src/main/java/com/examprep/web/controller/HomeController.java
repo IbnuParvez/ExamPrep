@@ -3,6 +3,7 @@ package com.examprep.web.controller;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.examprep.config.AiProperties;
 import com.examprep.security.SecurityUser;
@@ -33,7 +34,11 @@ public class HomeController {
         return "privacy";
     }
 
-    @GetMapping("/error/403")
+    /**
+     * Spring Security forwards denied requests here, including POSTs that failed CSRF validation, so
+     * this mapping must accept every method; a GET-only handler answered 405 for those forwards.
+     */
+    @RequestMapping("/error/403")
     public String forbidden() {
         return "error/403";
     }

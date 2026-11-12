@@ -4,6 +4,7 @@ logs/
 *.log
 .env
 .env.local
+.env.bak
 .idea/
 *.iml
 .vscode/

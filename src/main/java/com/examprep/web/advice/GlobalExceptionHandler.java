@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.examprep.ai.exception.AiRateLimitException;
 import com.examprep.ai.exception.AiResponseException;
@@ -86,6 +87,19 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.FORBIDDEN;
         response.setStatus(status.value());
         return respond(request, status, "You do not have access to that resource.");
+    }
+
+    /**
+     * A missing static resource (favicon probes, stale asset URLs, mistyped paths) is a 404, not a
+     * server fault; the catch-all below used to log it at ERROR and answer 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Object handleMissingResource(NoResourceFoundException exception, HttpServletRequest request,
+                                        HttpServletResponse response) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        response.setStatus(status.value());
+        log.debug("No resource for {} {}", request.getMethod(), request.getRequestURI());
+        return respond(request, status, "We could not find that page.");
     }
 
     @ExceptionHandler(Exception.class)
