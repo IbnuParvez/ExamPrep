@@ -43,6 +43,7 @@
                     <a th:href="@{/dashboard}" th:classappend="${activeNav == 'dashboard'} ? 'is-active'">Dashboard</a>
                     <a th:href="@{/documents}" th:classappend="${activeNav == 'documents'} ? 'is-active'">Documents</a>
                     <a th:href="@{/documents/upload}" th:classappend="${activeNav == 'upload'} ? 'is-active'">Upload</a>
+                    <a th:href="@{/profile}" th:classappend="${activeNav == 'profile'} ? 'is-active'">Profile</a>
                 </th:block>
                 <a sec:authorize="!isAuthenticated()" th:href="@{/#how-it-works}">How it works</a>
                 <a sec:authorize="!isAuthenticated()" th:href="@{/privacy}">Privacy</a>
@@ -50,11 +51,11 @@
 
             <div class="header-actions">
                 <th:block sec:authorize="isAuthenticated()">
-                    <span class="user-chip">
+                    <a class="user-chip" th:href="@{/profile}" title="Your profile">
                         <span class="user-avatar" aria-hidden="true"
                               th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.fullName, 0, 1))}">S</span>
                         <span class="user-name" sec:authentication="principal.fullName">Student</span>
-                    </span>
+                    </a>
                     <form th:action="@{/logout}" method="post" class="inline-form">
                         <button type="submit" class="link-button">Sign out</button>
                     </form>

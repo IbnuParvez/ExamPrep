@@ -115,6 +115,13 @@ public class DocumentApplicationServiceImpl implements DocumentApplicationServic
         documentRepository.delete(document);
     }
 
+    @Override
+    public void purgeStoredFiles(UUID ownerId) {
+        for (Document document : documentRepository.findAllByOwnerIdOrderByCreatedAtDesc(ownerId)) {
+            storage.delete(document.getStorageKey());
+        }
+    }
+
     private void schedule(Document document) {
         try {
             processingService.process(document.getId());

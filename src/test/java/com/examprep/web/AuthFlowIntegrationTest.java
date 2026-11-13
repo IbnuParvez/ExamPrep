@@ -146,6 +146,114 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(unauthenticated());
     }
 
+    @Test
+    void profileUpdateChangesTheNameEverywhereAndPersists() throws Exception {
+        String email = register("Mary Jackson", "wind-tunnel-1958");
+        MockHttpSession session = signIn(email, "wind-tunnel-1958");
+        String newEmail = "mary.w-" + UUID.randomUUID() + "@example.com";
+
+        mockMvc.perform(post("/profile").session(session).with(csrf())
+                        .param("fullName", "Mary W. Jackson")
+                        .param("email", newEmail)
+                        .param("currentPassword", "")
+                        .param("newPassword", "")
+                        .param("newPasswordConfirm", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile?updated"));
+
+        // The same session must show the edited name everywhere without signing in again.
+        mockMvc.perform(get("/dashboard").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Mary W. Jackson")));
+
+        UserAccount account = userAccountRepository.findByEmailIgnoreCase(newEmail).orElseThrow();
+        assertThat(account.getFullName()).isEqualTo("Mary W. Jackson");
+        assertThat(userAccountRepository.findByEmailIgnoreCase(email)).isEmpty();
+    }
+
+    @Test
+    void profileUpdateRejectsAnEmailThatBelongsToAnotherAccount() throws Exception {
+        String taken = register("Taken Address", "taken-password");
+        String email = register("Katherine G. Johnson", "orbital-mechanics-2");
+        MockHttpSession session = signIn(email, "orbital-mechanics-2");
+
+        mockMvc.perform(post("/profile").session(session).with(csrf())
+                        .param("fullName", "Katherine G. Johnson")
+                        .param("email", taken))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("already uses that email address")));
+
+        assertThat(userAccountRepository.findByEmailIgnoreCase(taken).orElseThrow().getFullName())
+                .isEqualTo("Taken Address");
+    }
+
+    @Test
+    void profileUpdateChangesThePasswordAfterProvingTheCurrentOne() throws Exception {
+        String email = register("Dorothy Vaughan", "fortran-1961");
+        MockHttpSession session = signIn(email, "fortran-1961");
+
+        // A wrong current password must not change anything.
+        mockMvc.perform(post("/profile").session(session).with(csrf())
+                        .param("fullName", "Dorothy Vaughan")
+                        .param("email", email)
+                        .param("currentPassword", "not-my-password")
+                        .param("newPassword", "fortran-1962")
+                        .param("newPasswordConfirm", "fortran-1962"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("current password is not correct")));
+
+        mockMvc.perform(post("/profile").session(session).with(csrf())
+                        .param("fullName", "Dorothy Vaughan")
+                        .param("email", email)
+                        .param("currentPassword", "fortran-1961")
+                        .param("newPassword", "fortran-1962")
+                        .param("newPasswordConfirm", "fortran-1962"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile?updated"));
+
+        mockMvc.perform(formLogin("/login").user("email", email).password("password", "fortran-1962"))
+                .andExpect(authenticated().withUsername(email));
+        mockMvc.perform(formLogin("/login").user("email", email).password("password", "fortran-1961"))
+                .andExpect(unauthenticated());
+    }
+
+    @Test
+    void deletingTheAccountRemovesItAndSignsTheStudentOut() throws Exception {
+        String email = register("Annie Easley", "centaur-1955");
+        MockHttpSession session = signIn(email, "centaur-1955");
+        UUID accountId = userAccountRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+
+        // The wrong password keeps the account and the session intact.
+        mockMvc.perform(post("/profile/delete").session(session).with(csrf())
+                        .param("currentPassword", "wrong-password"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"));
+        mockMvc.perform(get("/profile").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("has not been deleted")));
+        assertThat(userAccountRepository.findById(accountId)).isPresent();
+
+        mockMvc.perform(post("/profile/delete").session(session).with(csrf())
+                        .param("currentPassword", "centaur-1955"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?deleted"));
+
+        assertThat(userAccountRepository.findById(accountId)).isEmpty();
+        // The session that pointed at the deleted account must no longer be authenticated.
+        mockMvc.perform(get("/dashboard").session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    private MockHttpSession signIn(String email, String password) throws Exception {
+        MvcResult login = mockMvc.perform(formLogin("/login")
+                        .user("email", email)
+                        .password("password", password))
+                .andExpect(authenticated().withUsername(email))
+                .andReturn();
+        return (MockHttpSession) login.getRequest().getSession(false);
+    }
+
     private String register(String name, String password) {
         String email = name.toLowerCase().replace(' ', '.') + "-" + UUID.randomUUID() + "@example.com";
         registrationService.register(new RegisterUserRequest(name, email, password));

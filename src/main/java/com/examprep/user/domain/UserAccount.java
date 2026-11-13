@@ -83,7 +83,14 @@ public class UserAccount {
         return createdAt;
     }
 
-    public void setFullName(String fullName) {
+    /** Applies an edited name and email; uniqueness and format are validated by the service layer. */
+    public void updateProfile(String fullName, String email) {
         this.fullName = fullName;
+        this.email = email;
+    }
+
+    /** Replaces the stored hash after the student proves their current password. */
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }
